@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Row, StatusBadge, StatusDot } from "@/components/ui";
 import type { Job } from "@/lib/jobs/types";
 import type { FileEntry, PerAppFiles } from "@/lib/jobs/per-app-files";
 
@@ -11,77 +12,142 @@ type Props = {
   renderedMarkdown: Record<string, string>;
 };
 
-const TAB_ORDER = [
-  "job_description",
-  "classification",
-  "dispatcher_question",
-  "questions",
-  "jd_analysis",
-  "company_research",
-  "resume_examples",
-  "feedback",
-  "feedback_history",
-  "provenance",
-  "interview_feedback",
-];
-
 const FEEDBACK_KEY = "interview_feedback";
 
+type GroupId = "resume" | "posting" | "research" | "audit" | "notes" | "debug";
+
+const GROUP_LABELS: Record<GroupId, string> = {
+  resume: "Resume",
+  posting: "Posting",
+  research: "Research",
+  audit: "Audit",
+  notes: "Notes",
+  debug: "Debug",
+};
+
+/** File keys that belong to each group, in display order. */
+const GROUP_KEYS: Record<Exclude<GroupId, "resume" | "notes" | "debug">, string[]> = {
+  posting: ["job_description", "classification", "dispatcher_question", "questions"],
+  research: ["jd_analysis", "company_research", "resume_examples"],
+  audit: ["feedback", "feedback_history", "provenance"],
+};
+
 export function JobDetailView({ job, files, renderedMarkdown }: Props) {
-  // Read-only markdown tabs (the agent-written outputs). interview_feedback
-  // is editable, so it gets its own pane and is excluded from this list.
   const presentText = useMemo(
     () =>
-      [...files.known, ...files.other]
-        .filter(
-          (f) =>
-            f.exists &&
-            f.relPath.toLowerCase().endsWith(".md") &&
-            f.key !== FEEDBACK_KEY,
-        )
-        .sort((a, b) => TAB_ORDER.indexOf(a.key) - TAB_ORDER.indexOf(b.key)),
+      [...files.known, ...files.other].filter(
+        (f) =>
+          f.exists && f.relPath.toLowerCase().endsWith(".md") && f.key !== FEEDBACK_KEY,
+      ),
     [files],
   );
 
-  // Interview feedback tab is ALWAYS shown — user fills it in over time.
-  const feedbackEntry =
-    files.known.find((f) => f.key === FEEDBACK_KEY) ?? null;
+  const filesByKey = useMemo(() => {
+    const m = new Map<string, FileEntry>();
+    for (const f of presentText) m.set(f.key, f);
+    return m;
+  }, [presentText]);
 
   const hasDocx = files.finalDocx.length > 0;
+  const feedbackEntry = files.known.find((f) => f.key === FEEDBACK_KEY) ?? null;
 
-  type TabId = string;
-  const initialTab: TabId = hasDocx ? "docx" : presentText[0]?.key ?? "meta";
-  const [tab, setTab] = useState<TabId>(initialTab);
+  // Compute group → present sub-keys.
+  const visible: Array<{ id: GroupId; keys: string[] }> = useMemo(() => {
+    const out: Array<{ id: GroupId; keys: string[] }> = [];
+    if (hasDocx) out.push({ id: "resume", keys: ["docx"] });
+    for (const gid of ["posting", "research", "audit"] as const) {
+      const keys = GROUP_KEYS[gid].filter((k) => filesByKey.has(k));
+      if (keys.length) out.push({ id: gid, keys });
+    }
+    // Surface any "other" markdowns that fell through.
+    const extraKeys = presentText
+      .filter(
+        (f) =>
+          !Object.values(GROUP_KEYS)
+            .flat()
+            .includes(f.key) && f.key !== FEEDBACK_KEY,
+      )
+      .map((f) => f.key);
+    if (extraKeys.length) out.push({ id: "posting", keys: extraKeys });
+    out.push({ id: "notes", keys: [FEEDBACK_KEY] });
+    out.push({ id: "debug", keys: ["meta", "files"] });
+    return out;
+  }, [hasDocx, filesByKey, presentText]);
+
+  const initialGroup: GroupId =
+    visible[0]?.id ?? "debug";
+  const initialSubTab: string = visible[0]?.keys[0] ?? "meta";
+  const [group, setGroup] = useState<GroupId>(initialGroup);
+  const [subTab, setSubTab] = useState<string>(initialSubTab);
+
+  const onGroup = (g: GroupId) => {
+    setGroup(g);
+    const v = visible.find((x) => x.id === g);
+    if (v) setSubTab(v.keys[0]);
+  };
+
+  const activeGroup = visible.find((v) => v.id === group) ?? visible[0];
 
   return (
     <>
       <Header job={job} files={files} />
 
-      <div className="mt-6 mb-4 border-b flex items-center flex-wrap gap-1">
-        {hasDocx && <TabButton id="docx" tab={tab} setTab={setTab} label="Resume preview" accent />}
-        {presentText.map((f) => (
-          <TabButton key={f.key} id={f.key} tab={tab} setTab={setTab} label={f.label} />
+      {/* Primary tab strip (groups) */}
+      <div className="mt-6 border-b flex items-center flex-wrap gap-1">
+        {visible.map((v) => (
+          <TabButton
+            key={v.id}
+            id={v.id}
+            active={group === v.id}
+            onClick={() => onGroup(v.id)}
+            label={
+              <>
+                {GROUP_LABELS[v.id]}
+                {v.id === "resume" && (
+                  <StatusDot tone="accent" className="ml-1.5" />
+                )}
+                {v.id === "notes" && feedbackEntry?.exists && (
+                  <StatusDot tone="accent" className="ml-1.5" />
+                )}
+              </>
+            }
+          />
         ))}
-        <TabButton
-          id={FEEDBACK_KEY}
-          tab={tab}
-          setTab={setTab}
-          label={feedbackEntry?.exists ? "Interview feedback ●" : "Interview feedback"}
-        />
-        <TabButton id="meta" tab={tab} setTab={setTab} label="State + history" />
-        <TabButton id="files" tab={tab} setTab={setTab} label="All files" />
       </div>
 
-      <div>
-        {tab === "docx" && hasDocx && <DocxPane job={job} docx={files.finalDocx[0]} />}
-        {presentText.map((f) =>
-          tab === f.key ? (
-            <MarkdownPane key={f.key} file={f} html={renderedMarkdown[f.key] ?? ""} />
-          ) : null,
-        )}
-        {tab === FEEDBACK_KEY && <InterviewFeedbackPane job={job} />}
-        {tab === "meta" && <MetaPane job={job} files={files} />}
-        {tab === "files" && <AllFilesPane files={files} />}
+      {/* Secondary tab strip — only when the active group has multiple items. */}
+      {activeGroup && activeGroup.keys.length > 1 && (
+        <div className="mt-2 mb-4 flex items-center flex-wrap gap-1 pl-1">
+          {activeGroup.keys.map((k) => {
+            const label =
+              k === "meta"
+                ? "State + history"
+                : k === "files"
+                  ? "All files"
+                  : filesByKey.get(k)?.label ?? k;
+            return (
+              <SubTabButton
+                key={k}
+                active={subTab === k}
+                onClick={() => setSubTab(k)}
+                label={label}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-4">
+        {group === "resume" && hasDocx && <DocxPane job={job} docx={files.finalDocx[0]} />}
+        {group !== "resume" && group !== "notes" && group !== "debug" &&
+          (() => {
+            const f = filesByKey.get(subTab);
+            if (!f) return null;
+            return <MarkdownPane file={f} html={renderedMarkdown[f.key] ?? ""} />;
+          })()}
+        {group === "notes" && <InterviewFeedbackPane job={job} />}
+        {group === "debug" && subTab === "meta" && <MetaPane job={job} files={files} />}
+        {group === "debug" && subTab === "files" && <AllFilesPane files={files} />}
       </div>
     </>
   );
@@ -99,7 +165,7 @@ function Header({ job, files }: { job: Job; files: PerAppFiles }) {
           {job.role || (pending ? "Pasted URL — dispatcher will name this" : "")}
         </h1>
         <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2 text-xs">
-          <StatusBadge status={job.status} />
+          <StatusBadge>{job.status}</StatusBadge>
           {job.reclassifySuggestion && job.status === "imported" && (
             <span style={{ color: "var(--color-fg-muted)" }}>
               suggested status:{" "}
@@ -120,7 +186,10 @@ function Header({ job, files }: { job: Job; files: PerAppFiles }) {
             </a>
           )}
           {files.exists && job.folderPath && (
-            <span className="font-mono" style={{ color: "var(--color-fg-muted)", fontSize: "10px" }}>
+            <span
+              className="font-mono"
+              style={{ color: "var(--color-fg-muted)", fontSize: "10px" }}
+            >
               {job.folderPath.replace(/^\/Users\/[^/]+/, "~")}
             </span>
           )}
@@ -130,43 +199,48 @@ function Header({ job, files }: { job: Job; files: PerAppFiles }) {
   );
 }
 
-function StatusBadge({ status }: { status: Job["status"] }) {
+function TabButton({
+  id: _id,
+  active,
+  onClick,
+  label,
+}: {
+  id: string;
+  active: boolean;
+  onClick: () => void;
+  label: React.ReactNode;
+}) {
   return (
-    <span
-      className="px-2 py-0.5 rounded text-xs"
-      style={{ background: "var(--color-surface-2)", fontFamily: "var(--font-mono)" }}
+    <button
+      onClick={onClick}
+      className="px-3 py-2 text-xs transition-colors -mb-px border-b-2"
+      style={{
+        color: active ? "var(--color-fg)" : "var(--color-fg-muted)",
+        borderBottomColor: active ? "var(--color-accent)" : "transparent",
+        background: active ? "var(--color-surface-1)" : "transparent",
+      }}
     >
-      {status}
-    </span>
+      {label}
+    </button>
   );
 }
 
-function TabButton({
-  id,
-  tab,
-  setTab,
+function SubTabButton({
+  active,
+  onClick,
   label,
-  accent,
 }: {
-  id: string;
-  tab: string;
-  setTab: (s: string) => void;
+  active: boolean;
+  onClick: () => void;
   label: string;
-  accent?: boolean;
 }) {
-  const active = id === tab;
   return (
     <button
-      onClick={() => setTab(id)}
-      className="px-3 py-2 text-xs transition-colors -mb-px border-b-2"
+      onClick={onClick}
+      className="px-2 py-1 text-[11px] rounded-md transition-colors"
       style={{
-        color: active
-          ? "var(--color-fg)"
-          : accent
-            ? "var(--color-accent)"
-            : "var(--color-fg-muted)",
-        borderBottomColor: active ? "var(--color-accent)" : "transparent",
-        background: active ? "var(--color-surface-1)" : "transparent",
+        color: active ? "var(--color-fg)" : "var(--color-fg-muted)",
+        background: active ? "var(--color-surface-2)" : "transparent",
       }}
     >
       {label}
@@ -223,12 +297,8 @@ function DocxPane({ job, docx }: { job: Job; docx: FileEntry }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <FileMeta file={docx} />
-        <a
-          href={downloadHref}
-          className="px-3 py-1.5 text-xs rounded-md border"
-          style={{ background: "var(--color-surface-1)" }}
-        >
-          Download .docx
+        <a href={downloadHref}>
+          <Button>Download .docx</Button>
         </a>
       </div>
       {loading && (
@@ -266,7 +336,6 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
   const [synthMsg, setSynthMsg] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Auto-save on Ctrl/Cmd+S — feels right for a notes editor.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -321,8 +390,7 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
   };
 
   const insertRound = () => {
-    const num =
-      (content.match(/^##\s*Round\s+\d+/gim) ?? []).length + 1;
+    const num = (content.match(/^##\s*Round\s+\d+/gim) ?? []).length + 1;
     const today = new Date().toISOString().slice(0, 10);
     const template = `\n\n## Round ${num} — ${today}\n\n**Format:** \n**Interviewer(s):** \n\n**Topics:**\n- \n\n**What went well:**\n- \n\n**What didn't:**\n- \n\n**Feedback received:** \n`;
     setContent((c) => c.trimEnd() + template);
@@ -374,25 +442,14 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={insertRound}
-            className="px-3 py-1.5 text-xs rounded-md border"
-            style={{ background: "var(--color-surface-2)" }}
-          >
-            + Add round
-          </button>
-          <button
+          <Button onClick={insertRound}>+ Add round</Button>
+          <Button
+            variant={dirty ? "primary" : "secondary"}
             onClick={save}
             disabled={!dirty || saving}
-            className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-            style={{
-              background: dirty ? "var(--color-accent)" : "var(--color-surface-2)",
-              color: dirty ? "var(--color-bg)" : "var(--color-fg)",
-              borderColor: dirty ? "var(--color-accent)" : "var(--color-border)",
-            }}
           >
             {saving ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -418,9 +475,13 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
         }}
       />
 
-      <div className="mt-2 flex items-center justify-between text-xs" style={{ color: "var(--color-fg-muted)" }}>
+      <div
+        className="mt-2 flex items-center justify-between text-xs"
+        style={{ color: "var(--color-fg-muted)" }}
+      >
         <span>
-          {content.length.toLocaleString()} chars · {content.split(/\r?\n/).length.toLocaleString()} lines
+          {content.length.toLocaleString()} chars ·{" "}
+          {content.split(/\r?\n/).length.toLocaleString()} lines
         </span>
         {dirty ? (
           <span style={{ color: "var(--color-accent)" }}>unsaved (⌘S to save)</span>
@@ -445,7 +506,8 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
           reached a terminal outcome.
         </p>
         <div className="mt-3 flex items-center gap-3">
-          <button
+          <Button
+            variant="primary"
             onClick={synthesize}
             disabled={synthesizing || !content.trim() || dirty}
             title={
@@ -455,15 +517,9 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
                   ? "Write some feedback first"
                   : undefined
             }
-            className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderColor: "var(--color-accent)",
-            }}
           >
             {synthesizing ? "Spawning agent…" : "Synthesize lessons → about_user.md"}
-          </button>
+          </Button>
           {synthMsg && (
             <span className="text-xs" style={{ color: "var(--color-err)" }}>
               {synthMsg}
@@ -517,11 +573,7 @@ function MetaPane({ job, files }: { job: Job; files: PerAppFiles }) {
         </table>
       </Section>
       <Section title="Folder">
-        <Row
-          label="path"
-          value={job.folderPath ?? "(none)"}
-          mono
-        />
+        <Row label="path" value={job.folderPath ?? "(none)"} mono />
         <Row label="folder exists on disk" value={String(files.exists)} mono />
       </Section>
     </div>
@@ -585,29 +637,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="text-xs font-medium mb-2.5">{title}</div>
       <div>{children}</div>
     </section>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex justify-between text-xs py-1 border-b last:border-b-0">
-      <span style={{ color: "var(--color-fg-muted)" }}>{label}</span>
-      <span
-        className="truncate max-w-[60%] text-right"
-        style={{ fontFamily: mono ? "var(--font-mono)" : undefined }}
-        title={value}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
 

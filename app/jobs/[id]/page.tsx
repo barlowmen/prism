@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { readJob } from "@/lib/jobs/store";
 import { readPerAppFiles } from "@/lib/jobs/per-app-files";
 import { renderMarkdown } from "@/lib/markdown";
+import { BackLink } from "@/components/ui";
 import { JobDetailView } from "./view";
 import { JobActions } from "@/components/JobActions";
 import { JobContextBridge } from "./context-bridge";
@@ -67,13 +67,7 @@ export default async function JobDetailPage({
           status: job.status,
         }}
       />
-      <Link
-        href="/"
-        className="text-xs inline-block mb-4 hover:underline"
-        style={{ color: "var(--color-fg-muted)" }}
-      >
-        ← Dashboard
-      </Link>
+      <BackLink href="/" label="Dashboard" />
       <JobDetailView job={job} files={files} renderedMarkdown={rendered} />
       <div className="mt-6">
         <JobActions

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { MoreHorizontal } from "lucide-react";
+import { Button } from "./ui";
 import { AgentRunPane } from "./AgentRunPane";
 import { type Job, type JobStatus } from "@/lib/jobs/types";
 
@@ -30,21 +32,14 @@ const RECLASSIFY_OPTIONS: JobStatus[] = [
 
 export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }: Props) {
   const router = useRouter();
-  // Auto-mount the latest run if there is one so the user lands on a live
-  // stream when navigating to a mid-flight job.
   const [runId, setRunId] = useState<string | null>(job.latestRunId ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // Reclassify state
   const [newStatus, setNewStatus] = useState<JobStatus>(
     job.reclassifySuggestion ?? "discovered",
   );
-
-  // Answer state
   const [answer, setAnswer] = useState("");
-
-  // Request-changes modal state
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState("");
 
@@ -172,6 +167,8 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
     }
   };
 
+  // Build the action list for the current status. Primary actions render
+  // first as buttons; the rest collapse into a "More" overflow.
   const canDispatch =
     !!job.sourceUrl &&
     (job.status === "discovered" ||
@@ -179,13 +176,140 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
       job.status === "recommended_skip" ||
       job.status === "errored");
 
+  type Action = {
+    key: string;
+    label: ReactNode;
+    onClick: () => void;
+    variant: "primary" | "secondary" | "danger";
+    primary: boolean;
+  };
+  const actions: Action[] = [];
+
+  if (canDispatch) {
+    actions.push({
+      key: "dispatch",
+      label: busy === "dispatch" ? "Spawning…" : "Run dispatcher",
+      onClick: dispatch,
+      variant: job.status === "discovered" || job.status === "imported" ? "primary" : "secondary",
+      primary: job.status === "discovered" || job.status === "imported",
+    });
+  }
+  if (job.status === "recommended_skip") {
+    actions.push({
+      key: "accept-skip",
+      label: "Accept skip → rejected",
+      onClick: () => setStatus("rejected", "user accepted skip recommendation"),
+      variant: "primary",
+      primary: true,
+    });
+    actions.push({
+      key: "override-skip",
+      label: "Override → researching",
+      onClick: () => setStatus("researching", "user override: proceed despite skip recommendation"),
+      variant: "secondary",
+      primary: false,
+    });
+  }
+  if (job.status === "researching" || job.status === "errored") {
+    actions.push({
+      key: "research",
+      label: busy === "research" ? "Spawning…" : "Run research",
+      onClick: () => runPhaseAction("research", "research"),
+      variant: job.status === "researching" ? "primary" : "secondary",
+      primary: job.status === "researching",
+    });
+  }
+  if (job.status === "drafting" || job.status === "errored") {
+    actions.push({
+      key: "draft",
+      label: busy === "draft" ? "Spawning…" : "Run draft",
+      onClick: () => runPhaseAction("draft", "draft"),
+      variant: job.status === "drafting" ? "primary" : "secondary",
+      primary: job.status === "drafting",
+    });
+  }
+  if (job.status === "hm_review") {
+    actions.push({
+      key: "redraft",
+      label: busy === "redraft" ? "Spawning…" : "Re-draft w/ feedback",
+      onClick: () => runPhaseAction("redraft", "redraft"),
+      variant: "primary",
+      primary: true,
+    });
+    actions.push({
+      key: "review",
+      label: busy === "review" ? "Spawning…" : "Run HM review again",
+      onClick: () => runPhaseAction("review", "review"),
+      variant: "secondary",
+      primary: false,
+    });
+    actions.push({
+      key: "send-anyway",
+      label: "Send anyway → user review",
+      onClick: () => runPhaseAction("send-anyway", "send-anyway"),
+      variant: "secondary",
+      primary: false,
+    });
+  } else if (job.status === "errored") {
+    actions.push({
+      key: "review",
+      label: busy === "review" ? "Spawning…" : "Run HM review",
+      onClick: () => runPhaseAction("review", "review"),
+      variant: "secondary",
+      primary: false,
+    });
+  }
+  if (job.status === "provenance" || job.status === "errored") {
+    actions.push({
+      key: "provenance",
+      label: busy === "provenance" ? "Spawning…" : "Run provenance",
+      onClick: () => runPhaseAction("provenance", "provenance"),
+      variant: job.status === "provenance" ? "primary" : "secondary",
+      primary: job.status === "provenance",
+    });
+  }
+  if (job.status === "ready_to_apply") {
+    actions.push({
+      key: "mark-applied",
+      label: "Mark applied",
+      onClick: () => setStatus("applied", "user marked applied"),
+      variant: "primary",
+      primary: true,
+    });
+  }
+  if (job.status === "ready_for_user_review") {
+    actions.push({
+      key: "approve",
+      label: "Approve → ready to apply",
+      onClick: () => setStatus("ready_to_apply", "user approved final draft"),
+      variant: "primary",
+      primary: true,
+    });
+    actions.push({
+      key: "request-changes",
+      label: "Request changes",
+      onClick: () => setRequestChangesOpen(true),
+      variant: "secondary",
+      primary: true,
+    });
+    actions.push({
+      key: "reject",
+      label: "Reject",
+      onClick: () => setStatus("rejected", "user rejected at final review"),
+      variant: "danger",
+      primary: false,
+    });
+  }
+
+  const primaryActions = actions.filter((a) => a.primary);
+  const overflowActions = actions.filter((a) => !a.primary);
+
   return (
     <div className="space-y-4">
       {runId && (
         <AgentRunPane
           runId={runId}
           onCompleted={() => {
-            // Status was routed by the orchestrator; refresh the page.
             router.refresh();
           }}
         />
@@ -193,7 +317,7 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
 
       {err && (
         <div
-          className="text-xs rounded border p-2"
+          className="text-xs rounded-md border p-2"
           style={{ background: "var(--color-surface-1)", color: "var(--color-err)" }}
         >
           {err}
@@ -203,10 +327,11 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
       {/* Reclassify panel for imported jobs */}
       {job.status === "imported" && (
         <div
-          className="rounded-md border p-4"
+          className="rounded-md border-l-2 border p-4"
           style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-accent)",
+            background: "var(--color-accent-bg)",
+            borderColor: "var(--color-border)",
+            borderLeftColor: "var(--color-accent)",
           }}
         >
           <div className="text-sm font-medium mb-2">Reclassify this imported job</div>
@@ -219,7 +344,7 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value as JobStatus)}
-              className="px-2 py-1.5 rounded border text-sm"
+              className="px-2 py-1.5 rounded-md border text-sm"
               style={{
                 background: "var(--color-surface-2)",
                 fontFamily: "var(--font-mono)",
@@ -232,18 +357,13 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
                 </option>
               ))}
             </select>
-            <button
+            <Button
+              variant="primary"
               onClick={reclassify}
               disabled={busy === "reclassify"}
-              className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
             >
               {busy === "reclassify" ? "Saving…" : "Save status"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -251,98 +371,90 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
       {/* Provenance honesty-flag panel — takes precedence over dispatcher question */}
       {provenanceFlagged && (
         <div
-          className="rounded-md border p-4"
+          className="rounded-md border-l-2 border p-4"
           style={{
             background: "var(--color-surface-1)",
-            borderColor: "var(--color-err)",
+            borderColor: "var(--color-border)",
+            borderLeftColor: "var(--color-err)",
           }}
         >
           <div className="text-sm font-medium mb-1" style={{ color: "var(--color-err)" }}>
             Provenance audit flagged honesty issues
           </div>
           <p className="text-xs mb-3" style={{ color: "var(--color-fg-muted)" }}>
-            See the <strong>Provenance report</strong> tab for the specific
-            <code className="text-xs"> VERIFY:</code> notes or unchecked
-            boundaries. Either re-draft with the flags as context, or
-            accept the gap and proceed to user review with the warning
-            visible.
+            See the <strong>Provenance report</strong> tab for the specific{" "}
+            <code className="text-xs">VERIFY:</code> notes or unchecked
+            boundaries. Either re-draft with the flags as context, or accept
+            the gap and proceed to user review with the warning visible.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <button
+            <Button
+              variant="primary"
               onClick={() => runPhaseAction("fix-from-provenance", "fix-prov")}
               disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
             >
               {busy === "fix-prov" ? "Spawning…" : "Fix and re-draft"}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => runPhaseAction("accept-gap", "accept-gap")}
               disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
             >
               Accept the gap → user review
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Dispatcher question answer textarea */}
-      {job.status === "awaiting_input" && hasOpenDispatcherQuestion && !provenanceFlagged && (
-        <div
-          className="rounded-md border p-4"
-          style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-accent)",
-          }}
-        >
-          <div className="text-sm font-medium mb-2">Answer the dispatcher question</div>
-          <p className="text-xs mb-2" style={{ color: "var(--color-fg-muted)" }}>
-            Your answer is appended to <code>dispatcher_question.md</code> under
-            a timestamped <code>## Answer</code> heading, then the dispatcher
-            re-runs with the new context.
-          </p>
-          <textarea
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            className="w-full px-2 py-1.5 rounded border text-sm"
+      {job.status === "awaiting_input" &&
+        hasOpenDispatcherQuestion &&
+        !provenanceFlagged && (
+          <div
+            className="rounded-md border-l-2 border p-4"
             style={{
-              background: "var(--color-surface-2)",
-              fontFamily: "var(--font-mono)",
-              minHeight: 120,
+              background: "var(--color-accent-bg)",
+              borderColor: "var(--color-border)",
+              borderLeftColor: "var(--color-accent)",
             }}
-            spellCheck={false}
-            placeholder="Your answer…"
-          />
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              onClick={submitAnswer}
-              disabled={busy === "answer" || !answer.trim()}
-              className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
+          >
+            <div className="text-sm font-medium mb-2">Answer the dispatcher question</div>
+            <p className="text-xs mb-2" style={{ color: "var(--color-fg-muted)" }}>
+              Your answer is appended to <code>dispatcher_question.md</code>{" "}
+              under a timestamped <code>## Answer</code> heading, then the
+              dispatcher re-runs with the new context.
+            </p>
+            <textarea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              className="w-full px-2 py-1.5 rounded-md border text-sm"
               style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
+                background: "var(--color-surface-2)",
+                fontFamily: "var(--font-mono)",
+                minHeight: 120,
               }}
-            >
-              {busy === "answer" ? "Submitting…" : "Submit + re-dispatch"}
-            </button>
+              spellCheck={false}
+              placeholder="Your answer…"
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <Button
+                variant="primary"
+                onClick={submitAnswer}
+                disabled={busy === "answer" || !answer.trim()}
+              >
+                {busy === "answer" ? "Submitting…" : "Submit + re-dispatch"}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Request-changes panel for ready_for_user_review */}
       {requestChangesOpen && (
         <div
-          className="rounded-md border p-4"
+          className="rounded-md border-l-2 border p-4"
           style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-accent)",
+            background: "var(--color-accent-bg)",
+            borderColor: "var(--color-border)",
+            borderLeftColor: "var(--color-accent)",
           }}
         >
           <div className="text-sm font-medium mb-1">Request changes</div>
@@ -353,7 +465,7 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
           <textarea
             value={requestNotes}
             onChange={(e) => setRequestNotes(e.target.value)}
-            className="w-full px-2 py-1.5 rounded border text-sm"
+            className="w-full px-2 py-1.5 rounded-md border text-sm"
             style={{
               background: "var(--color-surface-2)",
               fontFamily: "var(--font-mono)",
@@ -363,188 +475,82 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
             placeholder="What needs to change?"
           />
           <div className="mt-2 flex justify-end gap-2">
-            <button
+            <Button
               onClick={() => {
                 setRequestChangesOpen(false);
                 setRequestNotes("");
               }}
               disabled={busy === "request-changes"}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={async () => {
                 await runPhaseAction("request-changes", "request-changes", { notes: requestNotes });
                 setRequestChangesOpen(false);
                 setRequestNotes("");
               }}
               disabled={busy === "request-changes" || !requestNotes.trim()}
-              className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
             >
               {busy === "request-changes" ? "Submitting…" : "Submit + re-draft"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Dispatcher actions */}
-      <div
-        className="rounded-md border p-4 flex items-center justify-between gap-3 flex-wrap"
-        style={{ background: "var(--color-surface-1)" }}
-      >
-        <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
-          Quick actions
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {canDispatch && (
-            <button
-              onClick={dispatch}
-              disabled={busy === "dispatch"}
-              className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-              style={{ background: "var(--color-surface-2)" }}
-            >
-              {busy === "dispatch" ? "Spawning…" : "Run dispatcher"}
-            </button>
-          )}
-          {job.status === "recommended_skip" && (
-            <>
-              <button
-                onClick={() => setStatus("researching", "user override: proceed despite skip recommendation")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
-              >
-                Override → researching
-              </button>
-              <button
-                onClick={() => setStatus("rejected", "user accepted skip recommendation")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
-              >
-                Accept skip → rejected
-              </button>
-            </>
-          )}
-          {(job.status === "researching" || job.status === "errored") && (
-            <button
-              onClick={() => runPhaseAction("research", "research")}
+      {/* Action row — primary buttons + More overflow */}
+      {actions.length > 0 && (
+        <div
+          className="rounded-md border p-3 flex items-center gap-2 flex-wrap"
+          style={{ background: "var(--color-surface-1)" }}
+        >
+          {primaryActions.map((a) => (
+            <Button
+              key={a.key}
+              variant={a.variant}
+              onClick={a.onClick}
               disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
             >
-              {busy === "research" ? "Spawning…" : "Run research"}
-            </button>
-          )}
-          {(job.status === "drafting" || job.status === "errored") && (
-            <button
-              onClick={() => runPhaseAction("draft", "draft")}
-              disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
-            >
-              {busy === "draft" ? "Spawning…" : "Run draft"}
-            </button>
-          )}
-          {(job.status === "hm_review" || job.status === "errored") && (
-            <button
-              onClick={() => runPhaseAction("review", "review")}
-              disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
-            >
-              {busy === "review" ? "Spawning…" : "Run HM review"}
-            </button>
-          )}
-          {(job.status === "provenance" || job.status === "errored") && (
-            <button
-              onClick={() => runPhaseAction("provenance", "provenance")}
-              disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{ background: "var(--color-surface-2)" }}
-            >
-              {busy === "provenance" ? "Spawning…" : "Run provenance"}
-            </button>
-          )}
-          {job.status === "hm_review" && (
-            <>
-              <button
-                onClick={() => runPhaseAction("redraft", "redraft")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
+              {a.label}
+            </Button>
+          ))}
+          {overflowActions.length > 0 && (
+            <details className="relative">
+              <summary
+                className="list-none cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border select-none"
                 style={{
-                  background: "var(--color-accent)",
-                  color: "var(--color-bg)",
-                  borderColor: "var(--color-accent)",
+                  background: "var(--color-surface-1)",
+                  color: "var(--color-fg)",
+                  borderColor: "var(--color-border)",
                 }}
               >
-                {busy === "redraft" ? "Spawning…" : "Re-draft w/ feedback"}
-              </button>
-              <button
-                onClick={() => runPhaseAction("send-anyway", "send-anyway")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
-              >
-                Send anyway → user review
-              </button>
-            </>
-          )}
-          {job.status === "ready_to_apply" && (
-            <button
-              onClick={() => setStatus("applied", "user marked applied")}
-              disabled={!!busy}
-              className="px-3 py-1.5 text-xs rounded border"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
-            >
-              Mark applied
-            </button>
-          )}
-          {job.status === "ready_for_user_review" && (
-            <>
-              <button
-                onClick={() => setStatus("ready_to_apply", "user approved final draft")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
+                <MoreHorizontal className="w-3 h-3" /> More
+              </summary>
+              <div
+                className="absolute right-0 mt-1 z-20 rounded-md border p-1 flex flex-col gap-1 min-w-[220px]"
                 style={{
-                  background: "var(--color-accent)",
-                  color: "var(--color-bg)",
-                  borderColor: "var(--color-accent)",
+                  background: "var(--color-surface-1)",
+                  borderColor: "var(--color-border-strong)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
                 }}
               >
-                Approve → ready to apply
-              </button>
-              <button
-                onClick={() => setRequestChangesOpen(true)}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
-              >
-                Request changes
-              </button>
-              <button
-                onClick={() => setStatus("rejected", "user rejected at final review")}
-                disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
-              >
-                Reject
-              </button>
-            </>
+                {overflowActions.map((a) => (
+                  <Button
+                    key={a.key}
+                    variant={a.variant === "primary" ? "secondary" : a.variant}
+                    onClick={a.onClick}
+                    disabled={!!busy}
+                    className="!justify-start"
+                  >
+                    {a.label}
+                  </Button>
+                ))}
+              </div>
+            </details>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
