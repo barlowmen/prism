@@ -31,6 +31,7 @@ export const META_DIR = path.join(WORKSPACE_DIR, "_meta");
 export const RESUMES_DIR = path.join(WORKSPACE_DIR, "_resumes");
 export const APPS_DIR = path.join(WORKSPACE_DIR, "apps");
 export const POSTINGS_DIR = path.join(WORKSPACE_DIR, "postings");
+export const PREP_DIR = path.join(WORKSPACE_DIR, "prep");
 export const STATE_DIR = path.join(WORKSPACE_DIR, ".state");
 
 /**
