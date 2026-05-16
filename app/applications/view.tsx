@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown, ExternalLink, NotebookText } from "lucide-react";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import type { Job, JobOutcome } from "@/lib/jobs/types";
+
+const PREP_OUTCOMES: ReadonlyArray<JobOutcome> = [
+  "phone_screen",
+  "interview",
+  "offer",
+];
 
 const OUTCOMES: { value: JobOutcome | ""; label: string }[] = [
   { value: "", label: "—" },
@@ -108,19 +114,32 @@ export function ApplicationsView({ jobs }: { jobs: Job[] }) {
                 </div>
               </td>
               <td className="py-2 px-3 text-right">
-                {j.sourceUrl && (
-                  <a
-                    href={j.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="inline-flex items-center gap-1 text-xs hover:underline"
-                    style={{ color: "var(--color-fg-muted)" }}
-                    title={j.sourceUrl}
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    Posting
-                  </a>
-                )}
+                <div className="inline-flex items-center gap-3">
+                  {j.outcome && PREP_OUTCOMES.includes(j.outcome) && (
+                    <Link
+                      href={`/prep/${encodeURIComponent(j.company)}`}
+                      className="inline-flex items-center gap-1 text-xs hover:underline"
+                      style={{ color: "var(--color-accent)" }}
+                      title="Open the interview prep workspace for this company"
+                    >
+                      <NotebookText className="w-3 h-3" />
+                      Prep
+                    </Link>
+                  )}
+                  {j.sourceUrl && (
+                    <a
+                      href={j.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1 text-xs hover:underline"
+                      style={{ color: "var(--color-fg-muted)" }}
+                      title={j.sourceUrl}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Posting
+                    </a>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

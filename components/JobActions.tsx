@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, NotebookText } from "lucide-react";
 import { Button } from "./ui";
 import { AgentRunPane } from "./AgentRunPane";
 import { type Job, type JobStatus } from "@/lib/jobs/types";
@@ -304,6 +305,11 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
   const primaryActions = actions.filter((a) => a.primary);
   const overflowActions = actions.filter((a) => !a.primary);
 
+  const showPrepLink =
+    job.outcome === "phone_screen" ||
+    job.outcome === "interview" ||
+    job.outcome === "offer";
+
   return (
     <div className="space-y-4">
       {runId && (
@@ -496,6 +502,33 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
               {busy === "request-changes" ? "Submitting…" : "Submit + re-draft"}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Prep-workspace shortcut for jobs that have crossed into interview stages. */}
+      {showPrepLink && job.company && (
+        <div
+          className="rounded-md border-l-2 border p-3 flex items-center justify-between gap-3"
+          style={{
+            background: "var(--color-accent-bg)",
+            borderColor: "var(--color-border)",
+            borderLeftColor: "var(--color-accent)",
+          }}
+        >
+          <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
+            <strong style={{ color: "var(--color-fg)" }}>
+              Outcome: {job.outcome}
+            </strong>{" "}
+            — open the interview prep workspace for {job.company}.
+          </div>
+          <Link href={`/prep/${encodeURIComponent(job.company)}`}>
+            <Button
+              variant="primary"
+              icon={<NotebookText className="w-3 h-3" />}
+            >
+              Open prep workspace
+            </Button>
+          </Link>
         </div>
       )}
 
