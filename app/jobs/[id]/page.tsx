@@ -68,14 +68,41 @@ export default async function JobDetailPage({
         }}
       />
       <BackLink href="/" label="Dashboard" />
+      {actionableStatuses.has(job.status) && (
+        <div className="mb-6">
+          <JobActions
+            job={job}
+            hasOpenDispatcherQuestion={hasOpenDispatcherQuestion}
+            provenanceFlagged={provFlagged}
+          />
+        </div>
+      )}
       <JobDetailView job={job} files={files} renderedMarkdown={rendered} />
-      <div className="mt-6">
-        <JobActions
-          job={job}
-          hasOpenDispatcherQuestion={hasOpenDispatcherQuestion}
-          provenanceFlagged={provFlagged}
-        />
-      </div>
+      {!actionableStatuses.has(job.status) && (
+        <div className="mt-6">
+          <JobActions
+            job={job}
+            hasOpenDispatcherQuestion={hasOpenDispatcherQuestion}
+            provenanceFlagged={provFlagged}
+          />
+        </div>
+      )}
     </main>
   );
 }
+
+/**
+ * Statuses where the user is expected to act next, not read. For these
+ * we render the action panel ABOVE the document tabs so the next verb
+ * is on-screen without scrolling past 800-1200px of reading material.
+ */
+const actionableStatuses = new Set([
+  "imported",
+  "awaiting_input",
+  "recommended_skip",
+  "hm_review",
+  "ready_for_user_review",
+  "ready_to_apply",
+  "provenance",
+  "errored",
+]);

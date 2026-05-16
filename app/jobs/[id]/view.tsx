@@ -17,7 +17,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Row, StatusBadge, StatusDot } from "@/components/ui";
+import {
+  Button,
+  CodeArea,
+  Row,
+  StatusBadge,
+  StatusDot,
+  SubTab,
+  SubTabStrip,
+  Tab,
+  TabStrip,
+} from "@/components/ui";
 import type { Job } from "@/lib/jobs/types";
 import type { FileEntry, PerAppFiles } from "@/lib/jobs/per-app-files";
 
@@ -107,32 +117,20 @@ export function JobDetailView({ job, files, renderedMarkdown }: Props) {
     <>
       <Header job={job} files={files} />
 
-      {/* Primary tab strip (groups) */}
-      <div className="mt-6 border-b flex items-center flex-wrap gap-1">
+      <TabStrip className="mt-6">
         {visible.map((v) => (
-          <TabButton
-            key={v.id}
-            id={v.id}
-            active={group === v.id}
-            onClick={() => onGroup(v.id)}
-            label={
-              <>
-                {GROUP_LABELS[v.id]}
-                {v.id === "resume" && (
-                  <StatusDot tone="accent" className="ml-1.5" />
-                )}
-                {v.id === "notes" && feedbackEntry?.exists && (
-                  <StatusDot tone="accent" className="ml-1.5" />
-                )}
-              </>
-            }
-          />
+          <Tab key={v.id} active={group === v.id} onClick={() => onGroup(v.id)}>
+            {GROUP_LABELS[v.id]}
+            {v.id === "resume" && <StatusDot tone="ok" className="ml-1.5" />}
+            {v.id === "notes" && feedbackEntry?.exists && (
+              <StatusDot tone="muted" className="ml-1.5" />
+            )}
+          </Tab>
         ))}
-      </div>
+      </TabStrip>
 
-      {/* Secondary tab strip — only when the active group has multiple items. */}
       {activeGroup && activeGroup.keys.length > 1 && (
-        <div className="mt-2 mb-4 flex items-center flex-wrap gap-1 pl-1">
+        <SubTabStrip className="mt-2 mb-4">
           {activeGroup.keys.map((k) => {
             const label =
               k === "meta"
@@ -141,15 +139,16 @@ export function JobDetailView({ job, files, renderedMarkdown }: Props) {
                   ? "All files"
                   : filesByKey.get(k)?.label ?? k;
             return (
-              <SubTabButton
+              <SubTab
                 key={k}
                 active={subTab === k}
                 onClick={() => setSubTab(k)}
-                label={label}
-              />
+              >
+                {label}
+              </SubTab>
             );
           })}
-        </div>
+        </SubTabStrip>
       )}
 
       <div className="mt-4">
@@ -211,55 +210,6 @@ function Header({ job, files }: { job: Job; files: PerAppFiles }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function TabButton({
-  id: _id,
-  active,
-  onClick,
-  label,
-}: {
-  id: string;
-  active: boolean;
-  onClick: () => void;
-  label: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-2 text-xs transition-colors -mb-px border-b-2"
-      style={{
-        color: active ? "var(--color-fg)" : "var(--color-fg-muted)",
-        borderBottomColor: active ? "var(--color-accent)" : "transparent",
-        background: active ? "var(--color-surface-1)" : "transparent",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function SubTabButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-2 py-1 text-[11px] rounded-md transition-colors"
-      style={{
-        color: active ? "var(--color-fg)" : "var(--color-fg-muted)",
-        background: active ? "var(--color-surface-2)" : "transparent",
-      }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -468,7 +418,7 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
         </div>
       </div>
 
-      <textarea
+      <CodeArea
         ref={textareaRef}
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -478,16 +428,9 @@ function InterviewFeedbackPane({ job }: { job: Job }) {
             if (dirty && !saving) save();
           }
         }}
-        spellCheck={false}
         placeholder={`Jot whatever's useful — date, interviewer name, topics, what went well/poorly, recruiter notes, weird vibes. Click "+ Add round" to drop a templated section.`}
-        className="w-full p-4 rounded-md border text-sm leading-relaxed"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: "var(--font-mono)",
-          minHeight: "60vh",
-          resize: "vertical",
-          tabSize: 2,
-        }}
+        className="p-4"
+        minHeight="60vh"
       />
 
       <div
