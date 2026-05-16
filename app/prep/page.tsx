@@ -1,92 +1,78 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { INTERVIEWS_DIR } from "@/lib/paths";
+import Link from "next/link";
+import { listPrepCompanies } from "@/lib/prep/store";
+import { EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-type PrepCompany = {
-  company: string;
-  absPath: string;
-  fileCount: number;
-  lastModified: number | null;
-};
-
-async function readPrepDir(): Promise<PrepCompany[]> {
-  const dir = path.join(INTERVIEWS_DIR, "prep");
-  let companies: string[] = [];
-  try {
-    companies = (await fs.readdir(dir, { withFileTypes: true }))
-      .filter((d) => d.isDirectory() && !d.name.startsWith("."))
-      .map((d) => d.name);
-  } catch (err: any) {
-    if (err?.code === "ENOENT") return [];
-    throw err;
-  }
-  const out: PrepCompany[] = [];
-  for (const c of companies) {
-    const absPath = path.join(dir, c);
-    let fileCount = 0;
-    let lastModified: number | null = null;
-    try {
-      const walk = async (p: string) => {
-        const entries = await fs.readdir(p, { withFileTypes: true });
-        for (const e of entries) {
-          const ep = path.join(p, e.name);
-          if (e.isDirectory()) await walk(ep);
-          else {
-            fileCount++;
-            const stat = await fs.stat(ep);
-            if (lastModified == null || stat.mtimeMs > lastModified) {
-              lastModified = stat.mtimeMs;
-            }
-          }
-        }
-      };
-      await walk(absPath);
-    } catch {}
-    out.push({ company: c, absPath, fileCount, lastModified });
-  }
-  out.sort((a, b) => (a.lastModified ?? 0) > (b.lastModified ?? 0) ? -1 : 1);
-  return out;
-}
-
 export default async function PrepPage() {
-  const companies = await readPrepDir();
+  const companies = await listPrepCompanies();
   return (
-    <main className="max-w-4xl mx-auto p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Interview prep</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          The post-application <code className="text-xs">prep/</code> directory
-          inside your workspace. Out of scope for full UI integration — this
-          page lists companies and last-modified dates so you can find your
-          notes fast.
-        </p>
-      </header>
+    <main className="max-w-5xl mx-auto p-6">
+      <PageHeader
+        title="Interview prep"
+        description={
+          <>
+            Per-company prep workspaces under{" "}
+            <code className="text-xs">prep/</code>. Each one is a set of
+            markdown files keyed to an interview round. Click a company to
+            open the workspace; new companies bootstrap from a standard
+            template.
+          </>
+        }
+      />
 
       {companies.length === 0 ? (
-        <div
-          className="rounded-md border p-8 text-center text-sm"
-          style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-        >
-          No prep folders yet.
-        </div>
+        <EmptyState title="No prep folders yet.">
+          When a job reaches the phone-screen or interview stage, open it
+          from <Link href="/applications" className="underline">Applications</Link>{" "}
+          and click <strong>Open prep workspace</strong> to bootstrap a
+          workspace from the standard template.
+        </EmptyState>
       ) : (
-        <ul className="rounded-md border divide-y" style={{ background: "var(--color-surface-1)", borderColor: "var(--color-border)" }}>
+        <ul
+          className="rounded-md border divide-y"
+          style={{
+            background: "var(--color-surface-1)",
+            borderColor: "var(--color-border)",
+          }}
+        >
           {companies.map((c) => (
-            <li key={c.company} className="px-4 py-3 flex items-center justify-between text-sm" style={{ borderColor: "var(--color-border)" }}>
-              <div>
-                <div className="font-medium">{c.company}</div>
-                <div className="text-xs font-mono" style={{ color: "var(--color-fg-muted)" }}>
-                  {c.absPath.replace(/^\/Users\/[^/]+/, "~")}
+            <li
+              key={c.company}
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <Link
+                href={`/prep/${encodeURIComponent(c.company)}`}
+                className="block px-4 py-3 hover:bg-[var(--color-surface-2)] transition-colors flex items-center justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{c.company}</span>
+                    {!c.bootstrapped && (
+                      <StatusBadge tone="warn">not bootstrapped</StatusBadge>
+                    )}
+                  </div>
+                  <div
+                    className="text-[11px] font-mono mt-0.5"
+                    style={{ color: "var(--color-fg-muted)" }}
+                  >
+                    prep/{c.company}/
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs text-right" style={{ color: "var(--color-fg-muted)" }}>
-                <div>{c.fileCount} file{c.fileCount === 1 ? "" : "s"}</div>
-                <div className="font-mono">
-                  {c.lastModified ? new Date(c.lastModified).toLocaleDateString() : "—"}
+                <div
+                  className="text-xs text-right shrink-0"
+                  style={{ color: "var(--color-fg-muted)" }}
+                >
+                  <div>
+                    {c.fileCount} file{c.fileCount === 1 ? "" : "s"}
+                  </div>
+                  <div className="font-mono">
+                    {c.lastModifiedMs
+                      ? new Date(c.lastModifiedMs).toLocaleDateString()
+                      : "—"}
+                  </div>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
         </ul>
