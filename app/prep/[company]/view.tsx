@@ -16,7 +16,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus, Save, Sparkles } from "lucide-react";
-import { Button, Callout, EmptyState } from "@/components/ui";
+import {
+  Button,
+  Callout,
+  CodeArea,
+  EmptyState,
+  SubTab,
+  SubTabStrip,
+  Tab,
+  TabStrip,
+} from "@/components/ui";
 import {
   GROUP_LABELS,
   GROUP_ORDER,
@@ -204,48 +213,27 @@ export function PrepCompanyView({
         </div>
       )}
 
-      {/* Primary tabs (one per group) */}
-      <div className="border-b flex items-center flex-wrap gap-1">
+      <TabStrip>
         {presentGroups.map((g) => (
-          <button
-            key={g}
-            onClick={() => onGroup(g)}
-            className="px-3 py-2 text-xs transition-colors -mb-px border-b-2"
-            style={{
-              color: group === g ? "var(--color-fg)" : "var(--color-fg-muted)",
-              borderBottomColor:
-                group === g ? "var(--color-accent)" : "transparent",
-              background: group === g ? "var(--color-surface-1)" : "transparent",
-            }}
-          >
+          <Tab key={g} active={group === g} onClick={() => onGroup(g)}>
             {GROUP_LABELS[g]}
-          </button>
+          </Tab>
         ))}
-      </div>
+      </TabStrip>
 
-      {/* Sub-tabs inside the active group (when >1 file). */}
       {groupFiles.length > 1 && (
-        <div className="mt-2 mb-4 flex items-center flex-wrap gap-1 pl-1">
+        <SubTabStrip className="mt-2 mb-4">
           {groupFiles.map((f) => (
-            <button
+            <SubTab
               key={f.relPath}
+              active={activeRelPath === f.relPath}
               onClick={() => setActiveRelPath(f.relPath)}
-              className="px-2 py-1 text-[11px] rounded-md transition-colors font-mono"
-              style={{
-                color:
-                  activeRelPath === f.relPath
-                    ? "var(--color-fg)"
-                    : "var(--color-fg-muted)",
-                background:
-                  activeRelPath === f.relPath
-                    ? "var(--color-surface-2)"
-                    : "transparent",
-              }}
+              mono
             >
               {f.relPath}
-            </button>
+            </SubTab>
           ))}
-        </div>
+        </SubTabStrip>
       )}
 
       <div className="mt-4">
@@ -407,17 +395,11 @@ function FilePane({
               loading…
             </div>
           ) : (
-            <textarea
+            <CodeArea
               value={content ?? ""}
               onChange={(e) => setContent(e.target.value)}
-              spellCheck={false}
-              className="w-full p-4 rounded-md border text-sm leading-relaxed"
-              style={{
-                background: "var(--color-surface-1)",
-                fontFamily: "var(--font-mono)",
-                minHeight: "60vh",
-                resize: "vertical",
-              }}
+              className="p-4"
+              minHeight="60vh"
             />
           )}
         </>

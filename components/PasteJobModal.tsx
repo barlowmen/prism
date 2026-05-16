@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field } from "./ui";
+import { Button, CodeArea, Field } from "./ui";
 
 export function PasteJobModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -106,16 +106,11 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
             >
               Raw JD text (optional — use only if the URL is dead or paywalled)
             </label>
-            <textarea
+            <CodeArea
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-md border text-sm"
-              style={{
-                background: "var(--color-surface-2)",
-                fontFamily: "var(--font-mono)",
-                minHeight: 100,
-              }}
-              spellCheck={false}
+              surface="surface-2"
+              minHeight={100}
             />
           </div>
 

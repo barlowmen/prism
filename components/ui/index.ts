@@ -7,3 +7,5 @@ export { BackLink } from "./BackLink";
 export { Row } from "./Row";
 export { PageHeader, SectionEyebrow } from "./PageHeader";
 export { Field, Area } from "./Form";
+export { TabStrip, Tab, SubTabStrip, SubTab } from "./Tabs";
+export { CodeArea } from "./CodeArea";

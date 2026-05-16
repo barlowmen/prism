@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { Button, EmptyState } from "@/components/ui";
+import { Button, CodeArea, EmptyState } from "@/components/ui";
 import type { Job } from "@/lib/jobs/types";
 
 export function ShortlistView({ initial }: { initial: Job[] }) {
@@ -157,12 +157,11 @@ function SkipModal({
           Optional. Used as the status note; later, this can feed a
           skip-patterns list to filter future discovery runs.
         </div>
-        <textarea
+        <CodeArea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="w-full px-2 py-1.5 rounded-md border text-sm"
-          style={{ background: "var(--color-surface-2)", minHeight: 80 }}
-          spellCheck={false}
+          surface="surface-2"
+          minHeight={80}
         />
         <div className="mt-4 flex items-center justify-end gap-2">
           <Button onClick={onClose} disabled={busy}>
