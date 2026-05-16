@@ -49,7 +49,7 @@ and can drive the workflow, answer questions, and edit files.
 
 ```bash
 # 1. Install
-git clone https://github.com/<you>/prism
+git clone https://github.com/barlowmen/prism
 cd prism
 npm install
 
@@ -58,9 +58,12 @@ cp .env.example .env.local
 # edit .env.local — PRISM_WORKSPACE=/path/to/your/workspace
 mkdir -p $(grep PRISM_WORKSPACE .env.local | cut -d= -f2)
 
-# 3. Start the server
+# 3. Start the server (production by default — builds, then runs)
 ./server.sh start
 # open http://127.0.0.1:3737
+#
+# For active development with HMR + on-demand compile:
+#   ./server.sh start --dev   (or: ./server.sh dev)
 ```
 
 First visit redirects you to **Profile** to do the structured intake interview

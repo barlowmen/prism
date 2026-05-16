@@ -27,7 +27,7 @@ which claude              # should resolve to a real path
 ## 2. Clone and install prism
 
 ```bash
-git clone https://github.com/<you>/prism
+git clone https://github.com/barlowmen/prism
 cd prism
 npm install
 ```
@@ -65,6 +65,12 @@ mkdir -p "$HOME/prism-workspace/_meta" \
 
 ```bash
 ./server.sh start
+# default is production mode: builds, then runs `next start`. Idle CPU
+# is essentially zero. First start takes ~30s for the build.
+#
+# For active development with HMR + on-demand compile (heavier CPU):
+#   ./server.sh start --dev    (or: ./server.sh dev)
+#
 # logs in .server.log
 open http://127.0.0.1:3737
 ```
@@ -72,7 +78,8 @@ open http://127.0.0.1:3737
 The server binds to `127.0.0.1` (loopback only). It is not reachable from
 the network.
 
-You can also run `./server.sh {stop|restart|status|logs}`.
+You can also run `./server.sh {stop|restart|status|logs}`. `restart`
+defaults to prod just like `start`; pass `--dev` if you want dev mode.
 
 ---
 
