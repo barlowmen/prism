@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "lucide-react": "^1.16.0",
     "mammoth": "1.12.0",
     "marked": "18.0.3",
     "next": "16.2.6",
