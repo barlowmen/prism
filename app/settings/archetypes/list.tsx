@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button, Callout } from "@/components/ui";
 import type { ArchetypeSummary } from "@/lib/archetypes/types";
 
 export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
   const router = useRouter();
-  const [archetypes, setArchetypes] = useState<ArchetypeSummary[]>(initial);
+  const [archetypes] = useState<ArchetypeSummary[]>(initial);
   const [seeding, setSeeding] = useState(false);
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
@@ -34,30 +35,18 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
   if (archetypes.length === 0) {
     return (
       <div className="space-y-3">
-        <div
-          className="rounded-md border p-6 text-sm"
-          style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-        >
-          No archetypes yet. The dispatcher won&apos;t be able to pick a base
-          resume until you create at least one. If you already have
-          DOCXes in <code className="text-xs">_resumes/</code> from
-          the original workflow, try the seed action to bootstrap.
-        </div>
+        <Callout tone="accent" title="No archetypes yet">
+          The dispatcher can&apos;t pick a base resume until you create at least
+          one. If you already have DOCXes in{" "}
+          <code className="text-xs">_resumes/</code> from the original workflow,
+          try the seed action below.
+        </Callout>
         <div className="flex items-center gap-2">
-          <button
-            onClick={seed}
-            disabled={seeding}
-            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-            style={{ background: "var(--color-surface-1)" }}
-          >
+          <Button onClick={seed} disabled={seeding}>
             {seeding ? "Seeding…" : "Seed from existing _resumes/"}
-          </button>
-          <Link
-            href="/settings/archetypes/new"
-            className="px-3 py-1.5 text-xs rounded border"
-            style={{ background: "var(--color-surface-1)" }}
-          >
-            Start from scratch
+          </Button>
+          <Link href="/settings/archetypes/new">
+            <Button>Start from scratch</Button>
           </Link>
         </div>
         {seedMsg && (
@@ -99,12 +88,21 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
                     {a.key}
                   </span>
                 </div>
-                <p
-                  className="text-xs mt-1 line-clamp-2"
-                  style={{ color: "var(--color-fg-muted)" }}
-                >
-                  {a.description || "(no description)"}
-                </p>
+                {a.description ? (
+                  <p
+                    className="text-xs mt-1 line-clamp-2"
+                    style={{ color: "var(--color-fg-muted)" }}
+                  >
+                    {a.description}
+                  </p>
+                ) : (
+                  <p
+                    className="text-xs mt-1 italic"
+                    style={{ color: "var(--color-fg-muted)" }}
+                  >
+                    No description
+                  </p>
+                )}
                 <div
                   className="mt-2 flex items-center gap-3 text-[11px] font-mono"
                   style={{ color: "var(--color-fg-muted)" }}
@@ -112,7 +110,13 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
                   {a.baseResumePath ? (
                     <>
                       <span>{a.baseResumePath}</span>
-                      <span style={{ color: a.baseResumeExists ? "var(--color-ok)" : "var(--color-warn)" }}>
+                      <span
+                        style={{
+                          color: a.baseResumeExists
+                            ? "var(--color-ok)"
+                            : "var(--color-warn)",
+                        }}
+                      >
                         {a.baseResumeExists
                           ? `${fmtBytes(a.baseResumeSize!)} · ${new Date(a.baseResumeMtimeMs!).toLocaleDateString()}`
                           : "missing on disk"}
@@ -127,17 +131,19 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
               </div>
               <Link
                 href={`/settings/archetypes/${encodeURIComponent(a.key)}`}
-                className="px-3 py-1.5 text-xs rounded border shrink-0"
-                style={{ background: "var(--color-surface-2)" }}
+                className="shrink-0"
               >
-                Edit
+                <Button>Edit</Button>
               </Link>
             </div>
           </li>
         ))}
       </ul>
 
-      <details className="rounded-md border p-3" style={{ background: "var(--color-surface-1)" }}>
+      <details
+        className="rounded-md border p-3"
+        style={{ background: "var(--color-surface-1)" }}
+      >
         <summary
           className="text-xs cursor-pointer"
           style={{ color: "var(--color-fg-muted)" }}
@@ -146,19 +152,13 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
         </summary>
         <div className="mt-3 space-y-2">
           <p className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
-            Creates standard <code>ai</code> and <code>cloud</code>{" "}
-            archetypes if their DOCXes are present in{" "}
-            <code>_resumes/</code> and the archetype doesn&apos;t already
-            exist. Safe to re-run.
+            Creates standard <code>ai</code> and <code>cloud</code> archetypes
+            if their DOCXes are present in <code>_resumes/</code> and the
+            archetype doesn&apos;t already exist. Safe to re-run.
           </p>
-          <button
-            onClick={seed}
-            disabled={seeding}
-            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-            style={{ background: "var(--color-surface-2)" }}
-          >
+          <Button onClick={seed} disabled={seeding}>
             {seeding ? "Seeding…" : "Run seed"}
-          </button>
+          </Button>
           {seedMsg && (
             <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
               {seedMsg}

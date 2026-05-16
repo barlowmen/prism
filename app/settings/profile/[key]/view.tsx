@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui";
 import type { ChatMessage, ChatThread } from "@/lib/assistant/types";
 import type { SectionKey } from "@/lib/profile/sections";
 import type { SectionState } from "@/lib/profile/store";
@@ -251,9 +253,11 @@ export function SectionInterviewView({
           {thread && (
             <button
               onClick={discard}
-              className="text-[11px] hover:underline"
+              className="text-[11px] hover:underline inline-flex items-center gap-1"
               style={{ color: "var(--color-fg-muted)" }}
+              aria-label="Discard thread"
             >
+              <Trash2 className="w-3 h-3" />
               Discard thread
             </button>
           )}
@@ -288,7 +292,7 @@ export function SectionInterviewView({
                   className="max-w-[92%] rounded-md border px-3 py-2 text-sm whitespace-pre-wrap"
                   style={{
                     background: isUser
-                      ? "var(--color-surface-2)"
+                      ? "var(--color-accent-bg)"
                       : "var(--color-bg)",
                     borderColor: streamingThis
                       ? "var(--color-accent)"
@@ -358,18 +362,15 @@ export function SectionInterviewView({
             }}
           />
           <div className="mt-2 flex items-center justify-end gap-2">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={send}
               disabled={sending || !input.trim()}
-              className="px-3 py-1 text-xs rounded border disabled:opacity-50"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
+              title="⌘↵ to send"
             >
               {sending ? "Sending…" : "Send"}
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -387,20 +388,14 @@ export function SectionInterviewView({
             <div className="text-sm font-medium">Draft</div>
             <div className="flex items-center gap-2">
               {hasDraft && (
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={commit}
                   disabled={committing}
-                  className="px-3 py-1 text-xs rounded border disabled:opacity-50"
-                  style={{
-                    background: "var(--color-accent)",
-                    color: "var(--color-bg)",
-                    borderColor: "var(--color-accent)",
-                  }}
                 >
-                  {committing
-                    ? "Committing…"
-                    : `Commit to about_user.md`}
-                </button>
+                  {committing ? "Committing…" : `Commit to about_user.md`}
+                </Button>
               )}
             </div>
           </div>

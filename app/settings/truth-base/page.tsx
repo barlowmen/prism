@@ -1,5 +1,6 @@
 import { TRUTH_BASE_FILES, type TruthBaseSlug } from "@/lib/paths";
 import { readTruthBase } from "@/lib/truth-base";
+import { PageHeader } from "@/components/ui";
 import { TruthBaseEditor } from "./editor";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +15,17 @@ export default async function TruthBasePage() {
   }));
 
   return (
-    <main className="max-w-5xl mx-auto p-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Truth Base</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          Source-of-truth markdown files in <code className="text-xs">_meta/</code>.
-          Every agent reads these on cold start. Atomic temp-and-rename writes.
-        </p>
-      </header>
+    <>
+      <PageHeader
+        title="Truth Base"
+        description={
+          <>
+            Source-of-truth markdown files in <code className="text-xs">_meta/</code>.
+            Every agent reads these on cold start. Atomic temp-and-rename writes.
+          </>
+        }
+      />
       <TruthBaseEditor initial={initial} />
-    </main>
+    </>
   );
 }

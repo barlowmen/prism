@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
+import { Area, BackLink, Button, Field, PageHeader } from "@/components/ui";
 
 export default function NewArchetypePage() {
   const router = useRouter();
@@ -41,20 +42,12 @@ export default function NewArchetypePage() {
   };
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <Link
-        href="/settings/archetypes"
-        className="text-xs inline-block mb-3 hover:underline"
-        style={{ color: "var(--color-fg-muted)" }}
-      >
-        ← Archetypes
-      </Link>
-      <header className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">New archetype</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          You can upload the base resume DOCX on the next screen.
-        </p>
-      </header>
+    <div className="max-w-2xl">
+      <BackLink href="/settings/archetypes" label="Archetypes" />
+      <PageHeader
+        title="New archetype"
+        description="You can upload the base resume DOCX on the next screen."
+      />
 
       <div className="space-y-4">
         <Field
@@ -76,16 +69,16 @@ export default function NewArchetypePage() {
           label="Description"
           value={description}
           onChange={setDescription}
+          rows={3}
           placeholder="What this archetype is for — who it serves, what kinds of roles."
-          minHeight={80}
         />
         <Area
           label="Matching hints"
           value={matchingHints}
           onChange={setMatchingHints}
-          placeholder="Markdown. The dispatcher reads this when picking an archetype."
-          minHeight={140}
+          rows={7}
           mono
+          placeholder="Markdown. The dispatcher reads this when picking an archetype."
         />
 
         {err && (
@@ -95,102 +88,14 @@ export default function NewArchetypePage() {
         )}
 
         <div className="flex items-center justify-end gap-2">
-          <Link
-            href="/settings/archetypes"
-            className="px-3 py-1.5 text-xs rounded border"
-            style={{ background: "var(--color-surface-2)" }}
-          >
-            Cancel
+          <Link href="/settings/archetypes">
+            <Button>Cancel</Button>
           </Link>
-          <button
-            onClick={submit}
-            disabled={busy || !label.trim()}
-            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderColor: "var(--color-accent)",
-            }}
-          >
+          <Button variant="primary" onClick={submit} disabled={busy || !label.trim()}>
             {busy ? "Creating…" : "Create"}
-          </button>
+          </Button>
         </div>
       </div>
-    </main>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  help,
-  mono,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  placeholder?: string;
-  help?: string;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <label className="block text-xs mb-1" style={{ color: "var(--color-fg-muted)" }}>
-        {label}
-      </label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-2 py-1.5 rounded border text-sm"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: mono ? "var(--font-mono)" : undefined,
-        }}
-      />
-      {help && (
-        <div className="text-[10px] mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          {help}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Area({
-  label,
-  value,
-  onChange,
-  placeholder,
-  minHeight,
-  mono,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  placeholder?: string;
-  minHeight?: number;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <label className="block text-xs mb-1" style={{ color: "var(--color-fg-muted)" }}>
-        {label}
-      </label>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-2 py-1.5 rounded border text-sm"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: mono ? "var(--font-mono)" : undefined,
-          minHeight: minHeight ?? 100,
-        }}
-        spellCheck={false}
-      />
     </div>
   );
 }

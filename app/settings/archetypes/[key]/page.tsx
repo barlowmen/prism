@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import fs from "node:fs/promises";
 import { absInterviews } from "@/lib/paths";
 import { readArchetype } from "@/lib/archetypes/store";
+import { BackLink } from "@/components/ui";
 import { ArchetypeEditor } from "./editor";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,8 @@ export default async function ArchetypePage({
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-6">
-      <Link
-        href="/settings/archetypes"
-        className="text-xs inline-block mb-3 hover:underline"
-        style={{ color: "var(--color-fg-muted)" }}
-      >
-        ← Archetypes
-      </Link>
+    <div className="max-w-3xl">
+      <BackLink href="/settings/archetypes" label="Archetypes" />
       <header className="mb-5">
         <div className="flex items-baseline gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{a.label}</h1>
@@ -56,6 +50,6 @@ export default async function ArchetypePage({
       </header>
 
       <ArchetypeEditor initial={a} initialBaseInfo={baseInfo} />
-    </main>
+    </div>
   );
 }

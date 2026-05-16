@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadProfile } from "@/lib/profile/merge";
 import { readAllSectionStates } from "@/lib/profile/store";
 import { SECTIONS } from "@/lib/profile/sections";
+import { Button, Callout, PageHeader, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -27,63 +28,53 @@ export default async function ProfileInterviewPage({
   ).length;
 
   return (
-    <main className="max-w-5xl mx-auto p-6">
+    <>
       {firstRun && (
-        <div
-          className="rounded-md border p-4 mb-5"
-          style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-accent)",
-          }}
-        >
-          <div className="text-sm font-medium mb-1" style={{ color: "var(--color-accent)" }}>
-            Welcome to prism
-          </div>
-          <p className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
+        <div className="mb-5">
+          <Callout tone="accent" title="Welcome to prism">
             You don&apos;t have a profile yet. The interview below builds{" "}
-            <code className="text-xs">_meta/about_user.md</code> — the source
-            of truth every agent reads. Pick any section to start; the agent
-            asks one question at a time. You can do this in one sitting or
-            over many. Once you have at least the <em>objectives</em>,{" "}
+            <code className="text-xs">_meta/about_user.md</code> — the source of
+            truth every agent reads. Pick any section to start; the agent asks
+            one question at a time. You can do this in one sitting or over
+            many. Once you have at least the <em>objectives</em>,{" "}
             <em>experience</em>, and <em>skill_depth</em> sections committed,
-            set up <a href="/settings/archetypes" className="underline">archetypes</a> and
-            you&apos;re ready to dispatch your first job.
-          </p>
+            set up <a href="/settings/archetypes" className="underline">archetypes</a>{" "}
+            and you&apos;re ready to dispatch your first job.
+          </Callout>
         </div>
       )}
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Profile Interview</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          Structured intake / refresh for{" "}
-          <code className="text-xs">_meta/about_user.md</code>. Each section is
-          a focused interview that produces a markdown chunk you review and
-          commit. Backups land in{" "}
-          <code className="text-xs">_meta/.prism-backups/</code>.
-        </p>
-        <div
-          className="mt-3 flex gap-4 text-xs"
-          style={{ color: "var(--color-fg-muted)" }}
-        >
-          <span>
-            profile:{" "}
-            <span
-              style={{
-                color: profileExists ? "var(--color-ok)" : "var(--color-warn)",
-              }}
-            >
-              {profileExists ? "exists" : "new — first-time intake"}
-            </span>
+      <PageHeader
+        title="Profile Interview"
+        description={
+          <>
+            Structured intake / refresh for{" "}
+            <code className="text-xs">_meta/about_user.md</code>. Each section
+            is a focused interview that produces a markdown chunk you review
+            and commit. Backups land in{" "}
+            <code className="text-xs">_meta/.prism-backups/</code>.
+          </>
+        }
+      />
+
+      <div
+        className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
+        style={{ color: "var(--color-fg-muted)" }}
+      >
+        <span>
+          profile:{" "}
+          <span style={{ color: profileExists ? "var(--color-ok)" : "var(--color-warn)" }}>
+            {profileExists ? "exists" : "new — first-time intake"}
           </span>
-          <span>·</span>
-          <span>
-            sections present: {totalPresent} / {SECTIONS.length}
-          </span>
-          <span>·</span>
-          <span>drafts ready: {totalDrafts}</span>
-          <span>·</span>
-          <span>committed this session: {totalCommitted}</span>
-        </div>
-      </header>
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>
+          sections present: {totalPresent} / {SECTIONS.length}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>drafts ready: {totalDrafts}</span>
+        <span aria-hidden="true">·</span>
+        <span>committed this session: {totalCommitted}</span>
+      </div>
 
       <ul className="space-y-2">
         {SECTIONS.map((def) => {
@@ -100,8 +91,29 @@ export default async function ProfileInterviewPage({
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium">{def.label}</span>
-                  <FilePresenceBadge present={present} />
-                  <InterviewStatusBadge status={status} />
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[10px] font-mono border"
+                    style={{
+                      background: "transparent",
+                      color: present ? "var(--color-ok)" : "var(--color-warn)",
+                      borderColor: present ? "var(--color-ok)" : "var(--color-warn)",
+                    }}
+                  >
+                    {present ? "in profile" : "missing"}
+                  </span>
+                  {status !== "untouched" && (
+                    <StatusBadge
+                      tone={
+                        status === "committed"
+                          ? "ok"
+                          : status === "drafted"
+                            ? "accent"
+                            : "muted"
+                      }
+                    >
+                      {status}
+                    </StatusBadge>
+                  )}
                 </div>
                 <div
                   className="text-xs"
@@ -126,64 +138,19 @@ export default async function ProfileInterviewPage({
                   </div>
                 )}
               </div>
-              <Link
-                href={`/settings/profile/${def.key}`}
-                className="px-3 py-1.5 text-xs rounded border shrink-0"
-                style={{
-                  background:
-                    status === "drafted"
-                      ? "var(--color-accent)"
-                      : "var(--color-surface-2)",
-                  color:
-                    status === "drafted" ? "var(--color-bg)" : "var(--color-fg)",
-                  borderColor:
-                    status === "drafted"
-                      ? "var(--color-accent)"
-                      : "var(--color-border)",
-                }}
-              >
-                {status === "drafted"
-                  ? "Review draft"
-                  : present
-                    ? "Refresh"
-                    : "Start interview"}
+              <Link href={`/settings/profile/${def.key}`} className="shrink-0">
+                <Button variant={status === "drafted" ? "primary" : "secondary"}>
+                  {status === "drafted"
+                    ? "Review draft"
+                    : present
+                      ? "Refresh"
+                      : "Start interview"}
+                </Button>
               </Link>
             </li>
           );
         })}
       </ul>
-    </main>
-  );
-}
-
-function FilePresenceBadge({ present }: { present: boolean }) {
-  return (
-    <span
-      className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-      style={{
-        background: "var(--color-surface-2)",
-        color: present ? "var(--color-ok)" : "var(--color-warn)",
-      }}
-    >
-      {present ? "in profile" : "missing"}
-    </span>
-  );
-}
-
-function InterviewStatusBadge({ status }: { status: string }) {
-  if (status === "untouched") return null;
-  const color =
-    status === "committed"
-      ? "var(--color-ok)"
-      : status === "drafted"
-        ? "var(--color-accent)"
-        : "var(--color-fg-muted)";
-  return (
-    <span
-      className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-      style={{ background: "var(--color-surface-2)", color }}
-    >
-      {status}
-    </span>
+    </>
   );
 }

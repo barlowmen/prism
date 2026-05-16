@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Area, Button, Field } from "@/components/ui";
 import type { Archetype } from "@/lib/archetypes/types";
 
 export function ArchetypeEditor({
@@ -117,13 +118,13 @@ export function ArchetypeEditor({
         label="Description"
         value={description}
         onChange={setDescription}
-        minHeight={70}
+        rows={3}
       />
       <Area
         label="Matching hints (markdown)"
         value={matchingHints}
         onChange={setMatchingHints}
-        minHeight={160}
+        rows={8}
         mono
         help="The dispatcher consults this list to decide whether this archetype fits a posting."
       />
@@ -131,12 +132,12 @@ export function ArchetypeEditor({
         label="Tailoring rules (optional, markdown)"
         value={tailoringRules}
         onChange={setTailoringRules}
-        minHeight={100}
+        rows={5}
         mono
         help="Augments about_user.md's tailoring playbook. The draft agent reads this when generating a resume from this base."
       />
 
-      <div
+      <section
         className="rounded-md border p-4"
         style={{
           background: "var(--color-surface-1)",
@@ -181,17 +182,12 @@ export function ArchetypeEditor({
               onChange={onFile}
               style={{ display: "none" }}
             />
-            <button
-              onClick={onPick}
-              disabled={uploading}
-              className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-              style={{ background: "var(--color-surface-2)" }}
-            >
+            <Button onClick={onPick} disabled={uploading}>
               {uploading ? "Uploading…" : baseInfo.exists ? "Replace DOCX" : "Upload DOCX"}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {(msg || err) && (
         <div
@@ -203,103 +199,17 @@ export function ArchetypeEditor({
       )}
 
       <div className="flex items-center justify-between pt-2">
-        <button
-          onClick={remove}
-          disabled={deleting}
-          className="text-xs hover:underline"
-          style={{ color: "var(--color-err)" }}
-        >
+        <Button variant="danger" onClick={remove} disabled={deleting}>
           {deleting ? "Deleting…" : "Delete archetype"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={dirty ? "primary" : "secondary"}
           onClick={save}
           disabled={!dirty || saving}
-          className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-          style={{
-            background: dirty ? "var(--color-accent)" : "var(--color-surface-2)",
-            color: dirty ? "var(--color-bg)" : "var(--color-fg)",
-            borderColor: dirty ? "var(--color-accent)" : "var(--color-border)",
-          }}
         >
           {saving ? "Saving…" : "Save"}
-        </button>
+        </Button>
       </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  mono,
-  help,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  mono?: boolean;
-  help?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs mb-1" style={{ color: "var(--color-fg-muted)" }}>
-        {label}
-      </label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2 py-1.5 rounded border text-sm"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: mono ? "var(--font-mono)" : undefined,
-        }}
-      />
-      {help && (
-        <div className="text-[10px] mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          {help}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Area({
-  label,
-  value,
-  onChange,
-  minHeight,
-  mono,
-  help,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  minHeight?: number;
-  mono?: boolean;
-  help?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs mb-1" style={{ color: "var(--color-fg-muted)" }}>
-        {label}
-      </label>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2 py-1.5 rounded border text-sm"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: mono ? "var(--font-mono)" : undefined,
-          minHeight: minHeight ?? 100,
-        }}
-        spellCheck={false}
-      />
-      {help && (
-        <div className="text-[10px] mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          {help}
-        </div>
-      )}
     </div>
   );
 }

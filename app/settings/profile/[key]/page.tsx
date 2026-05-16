@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadProfile } from "@/lib/profile/merge";
 import { readSectionState } from "@/lib/profile/store";
 import { readThread } from "@/lib/assistant/store";
 import { getSection, isSectionKey } from "@/lib/profile/sections";
+import { BackLink } from "@/components/ui";
 import { SectionInterviewView } from "./view";
 
 export const dynamic = "force-dynamic";
@@ -27,14 +27,8 @@ export default async function SectionInterviewPage({
     parsed?.sections.find((s) => s.key === key && s.present)?.content ?? null;
 
   return (
-    <main className="max-w-6xl mx-auto p-6">
-      <Link
-        href="/settings/profile"
-        className="text-xs inline-block mb-3 hover:underline"
-        style={{ color: "var(--color-fg-muted)" }}
-      >
-        ← Profile Interview
-      </Link>
+    <>
+      <BackLink href="/settings/profile" label="Profile Interview" />
       <header className="mb-5">
         <h1 className="text-2xl font-semibold tracking-tight">{def.label}</h1>
         <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
@@ -56,6 +50,6 @@ export default async function SectionInterviewPage({
         initialThread={thread}
         initialState={state}
       />
-    </main>
+    </>
   );
 }

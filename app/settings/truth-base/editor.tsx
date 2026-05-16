@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui";
 import type { TruthBaseSlug } from "@/lib/paths";
 
 type FileEntry = {
@@ -118,8 +120,8 @@ export function TruthBaseEditor({ initial }: { initial: FileEntry[] }) {
         })}
       </div>
 
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <div>
+      <div className="mb-3 flex items-start justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
           <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
             <code className="text-xs">{activeFile.relPath}</code>
             {" · "}
@@ -154,25 +156,16 @@ export function TruthBaseEditor({ initial }: { initial: FileEntry[] }) {
               {state.message}
             </span>
           )}
-          <button
-            onClick={reload}
-            className="px-3 py-1.5 text-xs rounded-md border"
-            style={{ background: "var(--color-surface-1)" }}
-          >
+          <Button onClick={reload} icon={<RefreshCw className="w-3 h-3" />}>
             Reload from disk
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={dirty ? "primary" : "secondary"}
             onClick={save}
             disabled={!dirty || state.kind === "saving"}
-            className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-40"
-            style={{
-              background: dirty ? "var(--color-accent)" : "var(--color-surface-1)",
-              color: dirty ? "var(--color-bg)" : "var(--color-fg)",
-              borderColor: dirty ? "var(--color-accent)" : "var(--color-border)",
-            }}
           >
             Save
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -196,7 +189,6 @@ export function TruthBaseEditor({ initial }: { initial: FileEntry[] }) {
         <span>
           {draft.length.toLocaleString()} chars · {draft.split(/\r?\n/).length.toLocaleString()} lines
         </span>
-        {dirty && <span style={{ color: "var(--color-accent)" }}>unsaved changes</span>}
       </div>
     </div>
   );

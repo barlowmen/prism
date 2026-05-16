@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { Button, Callout, Row } from "@/components/ui";
 import type { HealthReport } from "@/lib/health";
-
-type Tone = "ok" | "warn" | "err" | "muted";
 
 type ConnectivityResult = {
   exitCode: number;
@@ -72,21 +72,28 @@ export function HealthView({ initial }: { initial: HealthReport }) {
 
   const authBanner =
     report.auth.ok === "pending" ? null : !report.auth.ok ? (
-      <Banner tone="err">
-        <strong>Claude Code auth probe failed.</strong> {report.auth.error}. Run{" "}
-        <code>claude logout</code> then <code>claude login</code> and sign in
-        with your Pro/Max subscription.
-      </Banner>
+      <div className="mb-4">
+        <Callout tone="err" title="Claude Code auth probe failed">
+          {report.auth.error}. Run <code>claude logout</code> then{" "}
+          <code>claude login</code> and sign in with your Pro/Max subscription.
+        </Callout>
+      </div>
     ) : !report.auth.isSubscription ? (
-      <Banner tone="warn">
-        <strong>
-          Claude Code is using <code>apiKeySource = {report.auth.apiKeySource}</code>.
-        </strong>{" "}
-        This means API-key billing, not subscription. Unset{" "}
-        <code>ANTHROPIC_API_KEY</code> in your shell, then{" "}
-        <code>claude logout</code> and <code>claude login</code> with your
-        Pro/Max account.
-      </Banner>
+      <div className="mb-4">
+        <Callout
+          tone="warn"
+          title={
+            <>
+              Claude Code is using <code>apiKeySource = {report.auth.apiKeySource}</code>
+            </>
+          }
+        >
+          This means API-key billing, not subscription. Unset{" "}
+          <code>ANTHROPIC_API_KEY</code> in your shell, then{" "}
+          <code>claude logout</code> and <code>claude login</code> with your
+          Pro/Max account.
+        </Callout>
+      </div>
     ) : null;
 
   return (
@@ -96,14 +103,13 @@ export function HealthView({ initial }: { initial: HealthReport }) {
         <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
           checked {new Date(report.checkedAt).toLocaleString()}
         </div>
-        <button
+        <Button
           onClick={recheck}
           disabled={busy}
-          className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-          style={{ background: "var(--color-surface-1)" }}
+          icon={<RefreshCw className={`w-3 h-3 ${busy ? "animate-spin" : ""}`} />}
         >
           {busy ? "Re-checking…" : "Re-check"}
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,11 +213,6 @@ export function HealthView({ initial }: { initial: HealthReport }) {
           />
         </Card>
 
-        <Card title="Server binding">
-          <Row label="Host" value="127.0.0.1 (localhost-only)" mono tone="ok" />
-          <Row label="Port" value="3737" mono />
-        </Card>
-
         <Card title="Connectivity test">
           <p className="text-xs mb-3" style={{ color: "var(--color-fg-muted)" }}>
             One-shot Claude Code roundtrip. Spawns a subprocess that reads
@@ -219,14 +220,9 @@ export function HealthView({ initial }: { initial: HealthReport }) {
             couple of facts. Verifies auth + stream-json parsing without
             touching any job state.
           </p>
-          <button
-            onClick={runConnectivityTest}
-            disabled={testing}
-            className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-            style={{ background: "var(--color-surface-2)" }}
-          >
+          <Button onClick={runConnectivityTest} disabled={testing}>
             {testing ? "Running…" : "Test Claude Code"}
-          </button>
+          </Button>
           {testError && (
             <div className="mt-3 text-xs" style={{ color: "var(--color-err)" }}>
               {testError}
@@ -262,9 +258,10 @@ export function HealthView({ initial }: { initial: HealthReport }) {
                     Extracted from your profile
                   </div>
                   <pre
-                    className="text-xs rounded p-2 overflow-x-auto"
+                    className="text-xs rounded-md p-2 overflow-x-auto border"
                     style={{
                       background: "var(--color-surface-2)",
+                      borderColor: "var(--color-border)",
                       fontFamily: "var(--font-mono)",
                     }}
                   >
@@ -275,6 +272,10 @@ export function HealthView({ initial }: { initial: HealthReport }) {
             </div>
           )}
         </Card>
+      </div>
+
+      <div className="mt-4 text-[11px] font-mono" style={{ color: "var(--color-fg-muted)" }}>
+        Bound to 127.0.0.1:3737 (localhost-only)
       </div>
     </div>
   );
@@ -288,75 +289,6 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
     >
       <div className="text-sm font-medium mb-2.5">{title}</div>
       <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono,
-  tone,
-  sublabel,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  tone?: Tone;
-  sublabel?: string;
-}) {
-  const color =
-    tone === "ok"
-      ? "var(--color-ok)"
-      : tone === "warn"
-        ? "var(--color-warn)"
-        : tone === "err"
-          ? "var(--color-err)"
-          : tone === "muted"
-            ? "var(--color-fg-muted)"
-            : undefined;
-  return (
-    <div className="flex items-start justify-between text-xs py-1 gap-3">
-      <div className="min-w-0">
-        <div style={{ color: "var(--color-fg-muted)" }}>{label}</div>
-        {sublabel && (
-          <div
-            className="font-mono"
-            style={{ color: "var(--color-fg-muted)", fontSize: "10px" }}
-          >
-            {sublabel}
-          </div>
-        )}
-      </div>
-      <div
-        className="text-right truncate max-w-[60%]"
-        style={{ color, fontFamily: mono ? "var(--font-mono)" : undefined }}
-        title={value}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function Banner({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  const color =
-    tone === "err"
-      ? "var(--color-err)"
-      : tone === "warn"
-        ? "var(--color-warn)"
-        : "var(--color-fg)";
-  return (
-    <div
-      className="mb-4 rounded-md border p-3 text-xs"
-      style={{
-        borderColor: color,
-        background: "var(--color-surface-1)",
-        color: "var(--color-fg)",
-      }}
-    >
-      <span style={{ color }}>● </span>
-      {children}
     </div>
   );
 }

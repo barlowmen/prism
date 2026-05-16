@@ -1,30 +1,33 @@
 import Link from "next/link";
 import { readRunsIndex } from "@/lib/runs/store";
+import { EmptyState, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunsPage() {
   const runs = await readRunsIndex();
   return (
-    <main className="max-w-6xl mx-auto p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Agent runs</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
-          History of every Claude Code invocation. For debugging.
-          {" "}Stored in <code className="text-xs">.state/runs.json</code> +{" "}
-          <code className="text-xs">.state/runs/&lt;runId&gt;.log</code>.
-        </p>
-      </header>
+    <>
+      <PageHeader
+        title="Agent runs"
+        description={
+          <>
+            History of every Claude Code invocation. For debugging.{" "}
+            Stored in <code className="text-xs">.state/runs.json</code> +{" "}
+            <code className="text-xs">.state/runs/&lt;runId&gt;.log</code>.
+          </>
+        }
+      />
 
       {runs.length === 0 ? (
-        <div
-          className="rounded-md border p-8 text-center text-sm"
-          style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-        >
-          No runs yet.
-        </div>
+        <EmptyState title="No runs yet.">
+          Spawn a dispatcher or run a probe from <Link href="/settings/health" className="underline">Health</Link> to see entries here.
+        </EmptyState>
       ) : (
-        <div className="rounded-md border overflow-hidden" style={{ background: "var(--color-surface-1)" }}>
+        <div
+          className="rounded-md border overflow-hidden"
+          style={{ background: "var(--color-surface-1)" }}
+        >
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs" style={{ color: "var(--color-fg-muted)" }}>
@@ -33,8 +36,8 @@ export default async function RunsPage() {
                 <th className="font-normal py-2 px-3">Job</th>
                 <th className="font-normal py-2 px-3">Status</th>
                 <th className="font-normal py-2 px-3 text-right">Duration</th>
-                <th className="font-normal py-2 px-3 text-right">Tokens (in/out/cache)</th>
-                <th className="font-normal py-2 px-3">Auth</th>
+                <th className="font-normal py-2 px-3 text-right">Tokens</th>
+                <th className="font-normal py-2 px-3">Billing</th>
               </tr>
             </thead>
             <tbody>
@@ -43,6 +46,8 @@ export default async function RunsPage() {
                   r.completedAt && r.startedAt
                     ? new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()
                     : null;
+                const totalTokens =
+                  r.tokenTotals.input + r.tokenTotals.output;
                 return (
                   <tr key={r.runId} className="border-t" style={{ borderColor: "var(--color-border)" }}>
                     <td className="py-2 px-3 text-xs font-mono">
@@ -79,8 +84,11 @@ export default async function RunsPage() {
                     <td className="py-2 px-3 text-xs font-mono text-right">
                       {dur != null ? `${(dur / 1000).toFixed(1)}s` : "—"}
                     </td>
-                    <td className="py-2 px-3 text-xs font-mono text-right">
-                      {r.tokenTotals.input}/{r.tokenTotals.output}/{r.tokenTotals.cacheRead}
+                    <td
+                      className="py-2 px-3 text-xs font-mono text-right"
+                      title={`in ${r.tokenTotals.input} · out ${r.tokenTotals.output} · cache_r ${r.tokenTotals.cacheRead} · cache_c ${r.tokenTotals.cacheCreation}`}
+                    >
+                      {totalTokens.toLocaleString()}
                     </td>
                     <td
                       className="py-2 px-3 text-xs font-mono"
@@ -90,9 +98,11 @@ export default async function RunsPage() {
                             ? "var(--color-ok)"
                             : "var(--color-warn)",
                       }}
-                      title="apiKeySource — 'none' means subscription, anything else means API key billing"
+                      title="apiKeySource — 'none' means Pro/Max subscription, anything else means API key billing"
                     >
-                      {r.apiKeySource ?? "—"}
+                      {r.apiKeySource === "none"
+                        ? "subscription"
+                        : (r.apiKeySource ?? "—")}
                     </td>
                   </tr>
                 );
@@ -101,6 +111,6 @@ export default async function RunsPage() {
           </table>
         </div>
       )}
-    </main>
+    </>
   );
 }
