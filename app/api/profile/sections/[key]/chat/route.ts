@@ -1,3 +1,11 @@
+/**
+ * POST /api/profile/sections/<key>/chat
+ *
+ * Send a user message into one section's interview thread. Spawns or
+ * resumes the underlying section interview agent and returns the runId
+ * + threadId. The agent's task is to converge on a markdown draft of
+ * the section, emitted as a <draft>...</draft> block.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { sendSectionMessage } from "@/lib/profile/run";
 import { isSectionKey } from "@/lib/profile/sections";

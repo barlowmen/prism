@@ -1,3 +1,10 @@
+/**
+ * POST /api/jobs/<id>/accept-gap
+ *
+ * User reviewed provenance flags and chose to proceed despite them.
+ * Status advances to ready_for_user_review; the flags stay in
+ * provenance.md as a paper trail.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { acceptProvenanceGap } from "@/lib/agents/provenance";
 import { readJob } from "@/lib/jobs/store";

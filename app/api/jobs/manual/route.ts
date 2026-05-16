@@ -1,3 +1,12 @@
+/**
+ * POST /api/jobs/manual
+ *
+ * Manual job-paste path (the "Paste a job" modal). Either supply both
+ * company + role (creates apps/<co>/<role>/ up front) or just the URL
+ * (the dispatcher picks names from the JD and creates the folder).
+ * If `dispatchImmediately` (default true), kicks off the dispatcher
+ * agent in the same request.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { pasteJob } from "@/lib/agents/dispatch";
 

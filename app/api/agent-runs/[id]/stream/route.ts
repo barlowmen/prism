@@ -1,3 +1,14 @@
+/**
+ * GET /api/agent-runs/<runId>/stream
+ *
+ * Server-sent events stream of a run's lifecycle. Replays buffered
+ * events first (so a late-connecting client doesn't miss anything),
+ * then subscribes to the broker for live updates until the run
+ * completes or the client disconnects.
+ *
+ * If the run isn't in memory, replay from the on-disk log and close
+ * immediately with `event: end · reason: replay_only`.
+ */
 import { type NextRequest } from "next/server";
 import {
   getRunSnapshot,

@@ -1,3 +1,11 @@
+/**
+ * /api/jobs/<id>
+ *
+ * GET — fetch one job's full record.
+ * PATCH — partial update. Validates status / outcome / reclassifySuggestion
+ *         against their enums. Status changes append to statusHistory in
+ *         the store; concurrent PATCHes for the same id are serialized.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readJob, updateJob } from "@/lib/jobs/store";
 import { isJobStatus, type JobOutcome, type JobStatus } from "@/lib/jobs/types";

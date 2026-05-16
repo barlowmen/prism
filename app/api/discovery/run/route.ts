@@ -1,3 +1,11 @@
+/**
+ * POST /api/discovery/run
+ *
+ * Spawn the discovery agent (long-running: scans Greenhouse / Lever /
+ * Ashby boards, HN "Who is hiring", YC board, filters against the
+ * profile, drops a shortlist into <workspace>/postings/). Returns the
+ * runId immediately; subscribe via /api/agent-runs/<runId>/stream.
+ */
 import { NextResponse } from "next/server";
 import { startDiscovery } from "@/lib/agents/discovery";
 

@@ -1,3 +1,11 @@
+/**
+ * GET /api/agent-runs/<runId>/snapshot
+ *
+ * Cheap meta-only fetch for a run. Tries the in-memory broker first
+ * (live runs), falls back to the on-disk log (server restarted or
+ * run finished long ago). Used by the Runs index for quick status
+ * polls without paying for the full event replay.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { getRunSnapshot, replayFromDisk } from "@/lib/runs/broker";
 

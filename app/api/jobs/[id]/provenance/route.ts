@@ -1,3 +1,10 @@
+/**
+ * POST /api/jobs/<id>/provenance
+ *
+ * Spawn the provenance audit agent — checks every claim in the final
+ * DOCX against about_user.md, flags fabricated numbers / claims that
+ * cross honesty red lines, writes provenance.md.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { startProvenance } from "@/lib/agents/provenance";
 

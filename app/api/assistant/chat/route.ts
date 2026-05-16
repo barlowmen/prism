@@ -1,3 +1,12 @@
+/**
+ * POST /api/assistant/chat
+ *
+ * Send a message to the ⌘J assistant. Creates or resumes a thread and
+ * spawns the underlying Claude Code session. The response includes the
+ * threadId and the runId for the streaming subscription. `context`
+ * carries page-aware hints (pathname, jobId, summary) — sanitized here
+ * before being trusted by the run pipeline.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { sendMessage } from "@/lib/assistant/run";
 import type { ChatContextSnapshot } from "@/lib/assistant/types";

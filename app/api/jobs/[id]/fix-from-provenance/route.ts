@@ -1,3 +1,10 @@
+/**
+ * POST /api/jobs/<id>/fix-from-provenance
+ *
+ * Take the provenance.md flags as feedback and re-run the drafting
+ * agent. Used when the provenance audit caught fabricated numbers or
+ * claims that cross honesty red lines.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";

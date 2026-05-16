@@ -1,3 +1,12 @@
+/**
+ * /api/jobs/<id>/interview-feedback
+ *
+ * GET — read interview_feedback.md (the user's running notes during /
+ *       after interview rounds). 404 if the folder is unknown; an empty
+ *       object if the file doesn't yet exist.
+ * PUT — overwrite. Atomic temp-and-rename — half-written files never
+ *       appear, even on power loss.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";

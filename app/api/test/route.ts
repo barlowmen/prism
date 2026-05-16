@@ -1,3 +1,10 @@
+/**
+ * POST /api/test
+ *
+ * Connectivity test card on /settings/health. One-shot Claude Code
+ * roundtrip that reads about_user.md and extracts two facts. Verifies
+ * auth + stream-json parsing without touching any job state.
+ */
 import { NextResponse } from "next/server";
 import { INTERVIEWS_DIR, launchClaude, type AgentStreamEvent } from "@/lib/claude-launcher";
 

@@ -1,3 +1,9 @@
+/**
+ * POST /api/agent-runs/<runId>/cancel
+ *
+ * Cancel an in-flight Claude Code run. Returns 409 if the run already
+ * completed (cancellation is a no-op in that case).
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { cancelRun } from "@/lib/runs/broker";
 

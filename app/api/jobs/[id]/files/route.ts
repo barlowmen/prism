@@ -1,3 +1,10 @@
+/**
+ * GET /api/jobs/<id>/files
+ *
+ * Enumerate every known and "other" file in the per-app folder. Returns
+ * metadata + inline UTF-8 content for text files. Powers the All-files
+ * tab on the job detail page.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readJob } from "@/lib/jobs/store";
 import { readPerAppFiles } from "@/lib/jobs/per-app-files";

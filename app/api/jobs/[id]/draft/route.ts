@@ -1,3 +1,10 @@
+/**
+ * POST /api/jobs/<id>/draft
+ *
+ * Spawn the drafting agent. Generates the tailored Node + docx script
+ * and runs it to produce the final DOCX. Optional `feedback` body
+ * field is appended as context (used after HM review).
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { startDraft } from "@/lib/agents/research-draft-review";
 

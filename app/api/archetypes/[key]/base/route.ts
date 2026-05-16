@@ -1,3 +1,10 @@
+/**
+ * POST /api/archetypes/<key>/base
+ *
+ * Multipart upload endpoint for an archetype's base resume DOCX. Writes
+ * the file to <workspace>/_resumes/<filename>.docx and patches the
+ * archetype's baseResumePath. 8 MB cap, .docx-only.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readArchetype, uploadBaseResume } from "@/lib/archetypes/store";
 

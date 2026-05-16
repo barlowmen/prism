@@ -1,3 +1,9 @@
+/**
+ * GET /api/assistant/threads/<id>
+ *
+ * Full thread with messages. Used by the chat drawer on open and on
+ * each completed run to pull the persisted assistant text.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readThread } from "@/lib/assistant/store";
 

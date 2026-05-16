@@ -1,3 +1,10 @@
+/**
+ * POST /api/jobs/<id>/research
+ *
+ * Spawn the parallel research agents (JD analysis + company research +
+ * resume examples). Writes into <folder>/research/. Auto-progresses to
+ * draft phase per workflow.md.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { startResearch } from "@/lib/agents/research-draft-review";
 

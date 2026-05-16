@@ -1,3 +1,11 @@
+/**
+ * /api/archetypes
+ *
+ * GET — list all archetypes (summaries only, with base-resume on-disk stats).
+ * POST — create a new archetype. Body: { label, key?, description?,
+ *        matchingHints?, baseResumePath?, tailoringRules? }. The key is
+ *        derived from label if omitted; 409 if it collides.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import {
   createArchetype,

@@ -1,3 +1,9 @@
+/**
+ * GET /api/assistant/threads
+ *
+ * Light-weight list of assistant threads (no message bodies). Clients
+ * fetch one thread at a time via /api/assistant/threads/<id>.
+ */
 import { NextResponse } from "next/server";
 import { listThreads } from "@/lib/assistant/store";
 

@@ -1,3 +1,12 @@
+/**
+ * /api/archetypes/<key>
+ *
+ * GET — fetch one archetype's full record.
+ * PATCH — partial update. Only the five mutable string fields go through:
+ *         label, description, matchingHints, baseResumePath, tailoringRules.
+ * DELETE — remove the archetype record. The base resume DOCX on disk is
+ *          preserved (the user can still recover it if they re-create).
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import {
   deleteArchetype,

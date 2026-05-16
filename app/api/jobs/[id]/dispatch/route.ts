@@ -1,3 +1,11 @@
+/**
+ * POST /api/jobs/<id>/dispatch
+ *
+ * Spawn the dispatcher agent for an existing job. Used for re-dispatch
+ * after editing dispatcher_question.md or for jobs the user manually
+ * promoted from imported/recommended_skip. Body may override
+ * `postingUrl` / `jdText`; otherwise the job's stored sourceUrl is used.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readJob } from "@/lib/jobs/store";
 import { startDispatcher } from "@/lib/agents/dispatch";

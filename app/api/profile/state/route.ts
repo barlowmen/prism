@@ -1,3 +1,10 @@
+/**
+ * GET /api/profile/state
+ *
+ * Combined view of the profile (parsed about_user.md) and per-section
+ * interview state (draft / committed / threadId). Powers the
+ * /settings/profile index card list.
+ */
 import { NextResponse } from "next/server";
 import { loadProfile } from "@/lib/profile/merge";
 import { readAllSectionStates } from "@/lib/profile/store";

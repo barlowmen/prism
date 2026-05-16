@@ -1,3 +1,9 @@
+/**
+ * GET /api/jobs/<id>/docx/download
+ *
+ * Stream the tailored DOCX as a download. Optional `?name=` query
+ * picks a specific DOCX in the folder; default is the most-recent.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import path from "node:path";
 import { readJob } from "@/lib/jobs/store";

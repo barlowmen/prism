@@ -1,3 +1,10 @@
+/**
+ * POST /api/profile/sections/<key>/discard
+ *
+ * Throw away the section's current draft + chat thread. The committed
+ * contents of about_user.md are untouched — this only wipes the
+ * in-progress interview state.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { isSectionKey } from "@/lib/profile/sections";
 import { clearSectionState, readSectionState } from "@/lib/profile/store";

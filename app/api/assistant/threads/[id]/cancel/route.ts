@@ -1,3 +1,9 @@
+/**
+ * POST /api/assistant/threads/<id>/cancel
+ *
+ * Cancel the most recent still-running assistant message in this
+ * thread. 409 if nothing is in flight.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { readThread } from "@/lib/assistant/store";
 import { cancelRun } from "@/lib/runs/broker";

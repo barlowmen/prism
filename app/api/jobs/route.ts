@@ -1,3 +1,10 @@
+/**
+ * GET /api/jobs
+ *
+ * Full list of tracked jobs sorted by most-recently-updated. Backs
+ * Applications and Shortlist; the Dashboard kanban uses listJobs()
+ * directly from a server component.
+ */
 import { NextResponse } from "next/server";
 import { listJobs } from "@/lib/jobs/store";
 

@@ -1,3 +1,11 @@
+/**
+ * /api/truth-base/<slug>
+ *
+ * GET — read one truth-base file (about_user, style_guide, workflow).
+ * PUT — overwrite. Atomic temp-and-rename so half-written files never
+ *       appear on disk. The slug must be in the allowlist at
+ *       lib/paths.ts:TRUTH_BASE_FILES; anything else is rejected.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import {
   isValidTruthBaseSlug,

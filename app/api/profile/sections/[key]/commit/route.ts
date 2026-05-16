@@ -1,3 +1,11 @@
+/**
+ * POST /api/profile/sections/<key>/commit
+ *
+ * Splice the section's current draft into _meta/about_user.md atomically,
+ * replacing the matching H2. The previous version of the file is backed
+ * up under _meta/.prism-backups/ before the rename. State transitions
+ * to "committed".
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { isSectionKey } from "@/lib/profile/sections";
 import { readSectionState, upsertSectionState } from "@/lib/profile/store";
