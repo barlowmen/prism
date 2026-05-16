@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 import type { Job, JobStatus } from "@/lib/jobs/types";
 import type { ColumnGroup, GroupedJobs } from "@/lib/jobs/grouping";
 import { PasteJobModal } from "@/components/PasteJobModal";
 import { usePageContext } from "@/components/ChatContext";
+import { Button, Callout, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 
 type ColumnDef = { group: ColumnGroup; status: JobStatus; label: string };
 
@@ -59,72 +61,48 @@ export function Dashboard(props: Props) {
 
   return (
     <main className="max-w-7xl mx-auto p-6">
-      <header className="mb-6 flex items-baseline justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--color-fg-muted)" }}>
+      <PageHeader
+        title="Dashboard"
+        description={
+          <>
             {totalJobs} job{totalJobs === 1 ? "" : "s"} tracked. Click a row to
             act on it; <kbd className="text-[10px]">⌘J</kbd> for the assistant.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <DiscoveryButton router={router} />
-          <Link
-            href="/shortlist"
-            className="px-3 py-1.5 text-xs rounded-md border"
-            style={{ background: "var(--color-surface-1)" }}
-          >
-            Shortlist
-          </Link>
-          <button
-            onClick={() => setPasteOpen(true)}
-            className="px-3 py-1.5 text-xs rounded-md border"
-            style={{ background: "var(--color-surface-1)" }}
-          >
-            Paste a job
-          </button>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <DiscoveryButton router={router} />
+            <Link href="/shortlist">
+              <Button>Shortlist</Button>
+            </Link>
+            <Button onClick={() => setPasteOpen(true)}>Paste a job</Button>
+          </>
+        }
+      />
 
       {importPreview.notImported > 0 && (
-        <div
-          className="mb-6 rounded-md border p-4 flex items-center justify-between gap-4"
-          style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-accent)",
-          }}
-        >
-          <div>
-            <div className="text-sm">
-              <span style={{ color: "var(--color-accent)" }}>●</span>{" "}
-              <strong>{importPreview.notImported}</strong> application folder
-              {importPreview.notImported === 1 ? "" : "s"} in{" "}
-              <code className="text-xs">apps/</code> not yet imported.
-            </div>
-            <div className="text-xs mt-1" style={{ color: "var(--color-fg-muted)" }}>
-              {importPreview.preview
-                .map((p) => `${p.company}/${p.role}`)
-                .join(", ")}
-              {importPreview.notImported > importPreview.preview.length && " …"}
-            </div>
-            {importMsg && (
-              <div className="text-xs mt-1" style={{ color: "var(--color-fg-muted)" }}>
-                {importMsg}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={runImport}
-            disabled={importing}
-            className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderColor: "var(--color-accent)",
-            }}
+        <div className="mb-6">
+          <Callout
+            tone="accent"
+            title={
+              <>
+                <strong>{importPreview.notImported}</strong> application folder
+                {importPreview.notImported === 1 ? "" : "s"} in{" "}
+                <code className="text-xs">apps/</code> not yet imported
+              </>
+            }
+            action={
+              <Button variant="primary" onClick={runImport} disabled={importing}>
+                {importing ? "Importing…" : "Import folders"}
+              </Button>
+            }
           >
-            {importing ? "Importing…" : "Import folders"}
-          </button>
+            {importPreview.preview
+              .map((p) => `${p.company}/${p.role}`)
+              .join(", ")}
+            {importPreview.notImported > importPreview.preview.length && " …"}
+            {importMsg && <div className="mt-1">{importMsg}</div>}
+          </Callout>
         </div>
       )}
 
@@ -169,12 +147,9 @@ export function Dashboard(props: Props) {
         })}
 
         {totalJobs === 0 && importPreview.notImported === 0 && (
-          <div
-            className="rounded-md border p-8 text-center text-sm"
-            style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-          >
-            No jobs yet. Run discovery or paste a job manually.
-          </div>
+          <EmptyState title="No jobs yet.">
+            Run discovery or paste a job manually.
+          </EmptyState>
         )}
       </div>
 
@@ -204,15 +179,13 @@ function DiscoveryButton({ router }: { router: ReturnType<typeof useRouter> }) {
     }
   };
   return (
-    <button
+    <Button
       onClick={run}
       disabled={busy}
       title={err ?? "Spawn discovery agent. Writes to postings/ + .state/discovery/. Long-running (~5–15 min)."}
-      className="px-3 py-1.5 text-xs rounded-md border disabled:opacity-50"
-      style={{ background: "var(--color-surface-1)" }}
     >
       {busy ? "Spawning…" : "Run discovery"}
-    </button>
+    </Button>
   );
 }
 
@@ -267,24 +240,23 @@ function Column({
 
 function JobMeta({ job }: { job: Job }) {
   return (
-    <div className="flex items-center gap-2 mt-1.5 text-[10px]" style={{ color: "var(--color-fg-muted)" }}>
+    <div
+      className="flex items-center gap-2 mt-1.5 text-[10px]"
+      style={{ color: "var(--color-fg-muted)" }}
+    >
       {job.reclassifySuggestion && job.status === "imported" && (
-        <span
-          className="px-1.5 py-0.5 rounded"
-          style={{ background: "var(--color-surface-2)", color: "var(--color-accent)" }}
-        >
-          → {job.reclassifySuggestion}
-        </span>
+        <StatusBadge tone="accent">
+          suggested: {job.reclassifySuggestion}
+        </StatusBadge>
       )}
-      {job.sourceUrl && <span>↗</span>}
-      {job.outcome && (
-        <span
-          className="px-1.5 py-0.5 rounded"
-          style={{ background: "var(--color-surface-2)" }}
-        >
-          {job.outcome}
-        </span>
+      {job.sourceUrl && (
+        <ExternalLink
+          className="w-3 h-3 shrink-0"
+          style={{ color: "var(--color-fg-muted)" }}
+          aria-label="has source URL"
+        />
       )}
+      {job.outcome && <StatusBadge>{job.outcome}</StatusBadge>}
     </div>
   );
 }

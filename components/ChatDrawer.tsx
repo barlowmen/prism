@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { X, Plus } from "lucide-react";
 import { useChat } from "./ChatContext";
+import { Button } from "./ui";
 import type { ChatMessage, ChatThread } from "@/lib/assistant/types";
 
 type StreamingState = {
@@ -169,9 +171,6 @@ export function ChatDrawer() {
 
   if (!open) return null;
 
-  // Render the most recent assistant message: if a run is streaming for
-  // it, show the live `streaming.text` instead of the stored `text` (which
-  // is "" until the run completes).
   const messages = thread?.messages ?? [];
 
   return (
@@ -181,6 +180,7 @@ export function ChatDrawer() {
         width: 420,
         background: "var(--color-bg)",
         borderColor: "var(--color-border)",
+        animation: "drawer-slide-in 180ms ease-out",
       }}
     >
       <header
@@ -189,22 +189,19 @@ export function ChatDrawer() {
       >
         <div className="text-sm font-medium">Assistant</div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={newThread}
-            title="New chat"
-            className="px-2 py-1 text-xs rounded border"
-            style={{ background: "var(--color-surface-1)" }}
-          >
+          <Button size="sm" onClick={newThread} icon={<Plus className="w-3 h-3" />} title="New chat">
             New
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={() => setOpen(false)}
-            className="px-2 py-1 text-xs rounded border"
-            style={{ background: "var(--color-surface-1)" }}
+            aria-label="Close drawer"
             title="Close (esc)"
+            className="!px-1.5"
           >
-            ✕
-          </button>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </header>
 
@@ -261,7 +258,7 @@ export function ChatDrawer() {
           }}
           disabled={sending}
           placeholder="Ask anything… (⌘↵ to send)"
-          className="w-full px-2 py-1.5 rounded border text-sm"
+          className="w-full px-2 py-1.5 rounded-md border text-sm"
           style={{
             background: "var(--color-surface-1)",
             fontFamily: "var(--font-mono)",
@@ -275,26 +272,19 @@ export function ChatDrawer() {
           </div>
           <div className="flex gap-1">
             {streaming && !streaming.completed && (
-              <button
-                onClick={cancel}
-                className="px-2 py-1 text-xs rounded border"
-                style={{ background: "var(--color-surface-1)" }}
-              >
+              <Button size="sm" onClick={cancel}>
                 Stop
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              size="sm"
+              variant="primary"
               onClick={send}
               disabled={sending || !input.trim()}
-              className="px-3 py-1 text-xs rounded border disabled:opacity-50"
-              style={{
-                background: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderColor: "var(--color-accent)",
-              }}
+              title="⌘↵ to send"
             >
               {sending ? "Sending…" : "Send"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -322,7 +312,7 @@ function Bubble({
       <div
         className="max-w-[92%] rounded-md border px-3 py-2 text-sm whitespace-pre-wrap"
         style={{
-          background: isUser ? "var(--color-surface-2)" : "var(--color-surface-1)",
+          background: isUser ? "var(--color-accent-bg)" : "var(--color-surface-1)",
           borderColor: live ? "var(--color-accent)" : "var(--color-border)",
         }}
       >

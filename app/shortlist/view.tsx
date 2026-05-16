@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ExternalLink } from "lucide-react";
+import { Button, EmptyState } from "@/components/ui";
 import type { Job } from "@/lib/jobs/types";
 
 export function ShortlistView({ initial }: { initial: Job[] }) {
@@ -29,14 +31,12 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
     if (!j.sourceUrl) return;
     setBusy(j.id + ":approve");
     try {
-      // Dispatcher spawn updates status to "dispatching" automatically.
       const r = await fetch(`/api/jobs/${encodeURIComponent(j.id)}/dispatch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
       if (r.ok) {
-        // Drop from the shortlist view (status is no longer "discovered").
         setJobs((prev) => prev.filter((x) => x.id !== j.id));
         router.refresh();
       }
@@ -47,12 +47,9 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
 
   if (jobs.length === 0) {
     return (
-      <div
-        className="rounded-md border p-8 text-center text-sm"
-        style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-      >
-        Shortlist is empty. Run discovery from the Dashboard or paste a job manually.
-      </div>
+      <EmptyState title="Shortlist is empty.">
+        Run discovery from the Dashboard or paste a job manually.
+      </EmptyState>
     );
   }
 
@@ -61,7 +58,7 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
       {jobs.map((j) => (
         <li
           key={j.id}
-          className="rounded-md border p-4"
+          className="rounded-md border p-3"
           style={{ background: "var(--color-surface-1)" }}
         >
           <div className="flex items-start justify-between gap-4">
@@ -80,44 +77,36 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
                   href={j.sourceUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="text-[11px] hover:underline mt-1 block truncate max-w-md"
+                  className="text-[11px] hover:underline mt-1 inline-flex items-center gap-1 truncate max-w-md"
                   style={{ color: "var(--color-fg-muted)" }}
                   title={j.sourceUrl}
                 >
-                  {j.sourceUrl}
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{j.sourceUrl}</span>
                 </a>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
+              <Button
+                variant="primary"
                 onClick={() => approve(j)}
                 disabled={!j.sourceUrl || !!busy}
-                title={j.sourceUrl ? "Run dispatcher" : "No URL on this candidate"}
-                className="px-3 py-1.5 text-xs rounded border disabled:opacity-40"
-                style={{
-                  background: "var(--color-accent)",
-                  color: "var(--color-bg)",
-                  borderColor: "var(--color-accent)",
-                }}
+                title={j.sourceUrl ? "Run dispatcher" : "No URL on this candidate — paste a job manually with a URL"}
               >
                 {busy === j.id + ":approve" ? "Spawning…" : "Approve"}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setSkipping({ jobId: j.id, reason: "" })}
                 disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
               >
                 Skip
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setStatus(j.id, "held", "user held from shortlist")}
                 disabled={!!busy}
-                className="px-3 py-1.5 text-xs rounded border"
-                style={{ background: "var(--color-surface-2)" }}
               >
                 Hold
-              </button>
+              </Button>
             </div>
           </div>
         </li>
@@ -148,7 +137,7 @@ function SkipModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-16"
-      style={{ background: "rgba(0,0,0,0.55)" }}
+      style={{ background: "var(--color-scrim)" }}
       onClick={onClose}
     >
       <div
@@ -164,35 +153,25 @@ function SkipModal({
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="w-full px-2 py-1.5 rounded border text-sm"
+          className="w-full px-2 py-1.5 rounded-md border text-sm"
           style={{ background: "var(--color-surface-2)", minHeight: 80 }}
           spellCheck={false}
         />
         <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={busy}
-            className="px-3 py-1.5 text-xs rounded border"
-            style={{ background: "var(--color-surface-2)" }}
-          >
+          <Button onClick={onClose} disabled={busy}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={async () => {
               setBusy(true);
               await onSubmit(reason);
               setBusy(false);
             }}
             disabled={busy}
-            className="px-3 py-1.5 text-xs rounded border"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderColor: "var(--color-accent)",
-            }}
           >
             {busy ? "Saving…" : "Skip"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

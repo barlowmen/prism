@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ChevronDown, ExternalLink } from "lucide-react";
+import { EmptyState, StatusBadge } from "@/components/ui";
 import type { Job, JobOutcome } from "@/lib/jobs/types";
 
 const OUTCOMES: { value: JobOutcome | ""; label: string }[] = [
@@ -23,10 +25,7 @@ export function ApplicationsView({ jobs }: { jobs: Job[] }) {
   const setOutcome = async (job: Job, outcome: JobOutcome | "") => {
     setSavingId(job.id);
     try {
-      const body =
-        outcome === ""
-          ? { outcome: null }
-          : { outcome };
+      const body = outcome === "" ? { outcome: null } : { outcome };
       const r = await fetch(`/api/jobs/${encodeURIComponent(job.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -43,17 +42,17 @@ export function ApplicationsView({ jobs }: { jobs: Job[] }) {
 
   if (rows.length === 0) {
     return (
-      <div
-        className="rounded-md border p-8 text-center text-sm"
-        style={{ background: "var(--color-surface-1)", color: "var(--color-fg-muted)" }}
-      >
-        Nothing here yet. Jobs land here once they're approved for submission.
-      </div>
+      <EmptyState title="Nothing here yet.">
+        Jobs land here once they&apos;re approved for submission.
+      </EmptyState>
     );
   }
 
   return (
-    <div className="rounded-md border" style={{ background: "var(--color-surface-1)" }}>
+    <div
+      className="rounded-md border overflow-hidden"
+      style={{ background: "var(--color-surface-1)" }}
+    >
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs" style={{ color: "var(--color-fg-muted)" }}>
@@ -78,24 +77,35 @@ export function ApplicationsView({ jobs }: { jobs: Job[] }) {
                   </div>
                 </Link>
               </td>
-              <td className="py-2 px-3 text-xs font-mono">{j.status}</td>
+              <td className="py-2 px-3">
+                <StatusBadge>{j.status}</StatusBadge>
+              </td>
               <td className="py-2 px-3 text-xs" style={{ color: "var(--color-fg-muted)" }}>
                 {new Date(j.updatedAt).toLocaleDateString()}
               </td>
               <td className="py-2 px-3">
-                <select
-                  value={j.outcome ?? ""}
-                  onChange={(e) => setOutcome(j, e.target.value as JobOutcome | "")}
-                  disabled={savingId === j.id}
-                  className="px-2 py-1 text-xs rounded border"
-                  style={{ background: "var(--color-surface-2)" }}
-                >
-                  {OUTCOMES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative inline-block">
+                  <select
+                    value={j.outcome ?? ""}
+                    onChange={(e) => setOutcome(j, e.target.value as JobOutcome | "")}
+                    disabled={savingId === j.id}
+                    className="appearance-none pl-2 pr-7 py-1 text-xs rounded-md border disabled:opacity-50"
+                    style={{
+                      background: "var(--color-surface-2)",
+                      borderColor: "var(--color-border)",
+                    }}
+                  >
+                    {OUTCOMES.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
+                    style={{ color: "var(--color-fg-muted)" }}
+                  />
+                </div>
               </td>
               <td className="py-2 px-3 text-right">
                 {j.sourceUrl && (
@@ -103,11 +113,12 @@ export function ApplicationsView({ jobs }: { jobs: Job[] }) {
                     href={j.sourceUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-xs hover:underline"
+                    className="inline-flex items-center gap-1 text-xs hover:underline"
                     style={{ color: "var(--color-fg-muted)" }}
                     title={j.sourceUrl}
                   >
-                    posting ↗
+                    <ExternalLink className="w-3 h-3" />
+                    Posting
                   </a>
                 )}
               </td>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Field } from "./ui";
 
 export function PasteJobModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-16"
-      style={{ background: "rgba(0,0,0,0.55)" }}
+      style={{ background: "var(--color-scrim)" }}
       onClick={onClose}
     >
       <div
@@ -79,7 +80,7 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setUrl(e.target.value)}
               autoFocus
               placeholder="https://job-boards.greenhouse.io/..."
-              className="w-full px-2 py-1.5 rounded border text-sm"
+              className="w-full px-2 py-1.5 rounded-md border text-sm"
               style={{
                 background: "var(--color-surface-2)",
                 fontFamily: "var(--font-mono)",
@@ -97,7 +98,7 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
             <textarea
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
-              className="w-full px-2 py-1.5 rounded border text-sm"
+              className="w-full px-2 py-1.5 rounded-md border text-sm"
               style={{
                 background: "var(--color-surface-2)",
                 fontFamily: "var(--font-mono)",
@@ -107,25 +108,40 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={() => setOverrideOpen((s) => !s)}
-              className="text-xs hover:underline"
+          <details
+            className="rounded-md"
+            onToggle={(e) => setOverrideOpen((e.target as HTMLDetailsElement).open)}
+          >
+            <summary
+              className="cursor-pointer text-xs select-none"
               style={{ color: "var(--color-fg-muted)" }}
             >
-              {overrideOpen ? "▾" : "▸"} Override company / role names
-            </button>
-            {overrideOpen && (
-              <div className="mt-2 space-y-2 rounded border p-3" style={{ background: "var(--color-surface-2)" }}>
-                <p className="text-[11px]" style={{ color: "var(--color-fg-muted)" }}>
-                  Skip these and the dispatcher will pick names from the JD. Override only if you want a specific folder name (both fields required if you do).
-                </p>
-                <Field label="Company" value={company} onChange={setCompany} placeholder="Anthropic" />
-                <Field label="Role" value={role} onChange={setRole} placeholder="AppliedAIArchMgr_EntTechCyber" />
-              </div>
-            )}
-          </div>
+              Override company / role names
+            </summary>
+            <div
+              className="mt-2 space-y-2 rounded-md border p-3"
+              style={{ background: "var(--color-surface-2)" }}
+            >
+              <p className="text-[11px]" style={{ color: "var(--color-fg-muted)" }}>
+                Skip these and the dispatcher will pick names from the JD.
+                Override only if you want a specific folder name (both fields
+                required if you do).
+              </p>
+              <Field
+                label="Company"
+                value={company}
+                onChange={setCompany}
+                placeholder="Anthropic"
+              />
+              <Field
+                label="Role"
+                value={role}
+                onChange={setRole}
+                placeholder="AppliedAIArchMgr_EntTechCyber"
+                mono
+              />
+            </div>
+          </details>
 
           <label className="flex items-center gap-2 text-xs">
             <input
@@ -144,15 +160,11 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={busy}
-            className="px-3 py-1.5 text-xs rounded border"
-            style={{ background: "var(--color-surface-2)" }}
-          >
+          <Button onClick={onClose} disabled={busy}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={submit}
             disabled={busy || !url || overridePartial}
             title={
@@ -160,47 +172,11 @@ export function PasteJobModal({ onClose }: { onClose: () => void }) {
                 ? "Override needs both company and role filled, or leave both empty"
                 : undefined
             }
-            className="px-3 py-1.5 text-xs rounded border disabled:opacity-50"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderColor: "var(--color-accent)",
-            }}
           >
             {busy ? "Working…" : "Submit"}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (s: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs mb-1" style={{ color: "var(--color-fg-muted)" }}>
-        {label}
-      </label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-2 py-1.5 rounded border text-sm"
-        style={{
-          background: "var(--color-bg)",
-          fontFamily: "var(--font-mono)",
-        }}
-      />
     </div>
   );
 }
