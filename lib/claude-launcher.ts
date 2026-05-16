@@ -9,6 +9,7 @@ export type AgentPhase =
   | "hm_review"
   | "provenance"
   | "assistant"
+  | "prep_builder"
   | "probe";
 
 export type AgentStreamEvent =
