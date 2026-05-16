@@ -72,10 +72,9 @@ export function Dashboard(props: Props) {
         actions={
           <>
             <DiscoveryButton router={router} />
-            <Link href="/shortlist">
-              <Button>Shortlist</Button>
-            </Link>
-            <Button onClick={() => setPasteOpen(true)}>Paste a job</Button>
+            <Button variant="primary" onClick={() => setPasteOpen(true)}>
+              Paste a job
+            </Button>
           </>
         }
       />
@@ -245,9 +244,7 @@ function JobMeta({ job }: { job: Job }) {
       style={{ color: "var(--color-fg-muted)" }}
     >
       {job.reclassifySuggestion && job.status === "imported" && (
-        <StatusBadge tone="accent">
-          suggested: {job.reclassifySuggestion}
-        </StatusBadge>
+        <StatusBadge>suggested: {job.reclassifySuggestion}</StatusBadge>
       )}
       {job.sourceUrl && (
         <ExternalLink

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, CodeArea, Tab, TabStrip } from "@/components/ui";
 import type { TruthBaseSlug } from "@/lib/paths";
 
 type FileEntry = {
@@ -89,36 +89,26 @@ export function TruthBaseEditor({ initial }: { initial: FileEntry[] }) {
 
   return (
     <div>
-      <div className="flex items-center gap-1 mb-4 border-b">
+      <TabStrip className="mb-4">
         {tabs.map((slug) => {
           const f = files[slug];
           const tabDirty = drafts[slug] !== f.content;
-          const isActive = slug === active;
           return (
-            <button
-              key={slug}
-              onClick={() => setActive(slug)}
-              className="px-3 py-2 text-sm transition-colors -mb-px border-b-2"
-              style={{
-                color: isActive ? "var(--color-fg)" : "var(--color-fg-muted)",
-                borderBottomColor: isActive ? "var(--color-accent)" : "transparent",
-                background: isActive ? "var(--color-surface-1)" : "transparent",
-              }}
-            >
+            <Tab key={slug} active={slug === active} onClick={() => setActive(slug)}>
               {f.title}
               {tabDirty && (
                 <span
                   className="ml-1.5"
-                  style={{ color: "var(--color-accent)" }}
+                  style={{ color: "var(--color-warn)" }}
                   aria-label="unsaved changes"
                 >
                   •
                 </span>
               )}
-            </button>
+            </Tab>
           );
         })}
-      </div>
+      </TabStrip>
 
       <div className="mb-3 flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
@@ -169,20 +159,13 @@ export function TruthBaseEditor({ initial }: { initial: FileEntry[] }) {
         </div>
       </div>
 
-      <textarea
+      <CodeArea
         value={draft}
         onChange={(e) =>
           setDrafts((d) => ({ ...d, [active]: e.target.value }))
         }
-        spellCheck={false}
-        className="w-full p-4 rounded-md border text-sm leading-relaxed"
-        style={{
-          background: "var(--color-surface-1)",
-          fontFamily: "var(--font-mono)",
-          minHeight: "70vh",
-          resize: "vertical",
-          tabSize: 2,
-        }}
+        minHeight="70vh"
+        className="p-4"
       />
 
       <div className="mt-2 flex justify-between text-xs" style={{ color: "var(--color-fg-muted)" }}>

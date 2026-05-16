@@ -292,7 +292,7 @@ export function SectionInterviewView({
                   className="max-w-[92%] rounded-md border px-3 py-2 text-sm whitespace-pre-wrap"
                   style={{
                     background: isUser
-                      ? "var(--color-accent-bg)"
+                      ? "var(--color-surface-2)"
                       : "var(--color-bg)",
                     borderColor: streamingThis
                       ? "var(--color-accent)"

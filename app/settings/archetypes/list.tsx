@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Button, Callout } from "@/components/ui";
 import type { ArchetypeSummary } from "@/lib/archetypes/types";
 
@@ -111,19 +112,27 @@ export function ArchetypesList({ initial }: { initial: ArchetypeSummary[] }) {
                     <>
                       <span>{a.baseResumePath}</span>
                       <span
+                        className="inline-flex items-center gap-1"
                         style={{
                           color: a.baseResumeExists
                             ? "var(--color-ok)"
                             : "var(--color-warn)",
                         }}
                       >
+                        {!a.baseResumeExists && (
+                          <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                        )}
                         {a.baseResumeExists
                           ? `${fmtBytes(a.baseResumeSize!)} · ${new Date(a.baseResumeMtimeMs!).toLocaleDateString()}`
                           : "missing on disk"}
                       </span>
                     </>
                   ) : (
-                    <span style={{ color: "var(--color-warn)" }}>
+                    <span
+                      className="inline-flex items-center gap-1"
+                      style={{ color: "var(--color-warn)" }}
+                    >
+                      <AlertTriangle className="w-3 h-3" aria-hidden="true" />
                       no base DOCX set
                     </span>
                   )}

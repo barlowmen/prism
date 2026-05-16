@@ -4,7 +4,7 @@
  * Right-side ⌘J assistant drawer. Maintains one active thread, sends
  * messages via /api/assistant/chat, and subscribes to the SSE stream
  * for the in-flight assistant message. Renders user messages on the
- * right with an accent-bg tint, assistant on the left, tool-use pills
+ * right on surface-2, assistant on the left on surface-1, tool-use pills
  * inline above the streamed text, and a pulsing accent dot while the
  * agent is still talking.
  *
@@ -325,7 +325,7 @@ function Bubble({
       <div
         className="max-w-[92%] rounded-md border px-3 py-2 text-sm whitespace-pre-wrap"
         style={{
-          background: isUser ? "var(--color-accent-bg)" : "var(--color-surface-1)",
+          background: isUser ? "var(--color-surface-2)" : "var(--color-surface-1)",
           borderColor: live ? "var(--color-accent)" : "var(--color-border)",
         }}
       >
