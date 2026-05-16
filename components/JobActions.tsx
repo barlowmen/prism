@@ -19,7 +19,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, NotebookText } from "lucide-react";
-import { Button } from "./ui";
+import { Button, Callout, CodeArea } from "./ui";
 import { AgentRunPane } from "./AgentRunPane";
 import { type Job, type JobStatus } from "@/lib/jobs/types";
 
@@ -345,18 +345,11 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
         </div>
       )}
 
-      {/* Reclassify panel for imported jobs */}
+      {/* Reclassify panel for imported jobs. Info tone — this is state
+          triage ("pick the right status"), not a urgent CTA. */}
       {job.status === "imported" && (
-        <div
-          className="rounded-md border-l-2 border p-4"
-          style={{
-            background: "var(--color-accent-bg)",
-            borderColor: "var(--color-border)",
-            borderLeftColor: "var(--color-accent)",
-          }}
-        >
-          <div className="text-sm font-medium mb-2">Reclassify this imported job</div>
-          <p className="text-xs mb-3" style={{ color: "var(--color-fg-muted)" }}>
+        <Callout title="Reclassify this imported job" tone="info">
+          <p className="mb-3">
             Imported from <code className="text-xs">apps/</code>. Pick the real
             status. Suggestion is based on cheap file-presence heuristics —
             confirm before saving.
@@ -386,23 +379,13 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
               {busy === "reclassify" ? "Saving…" : "Save status"}
             </Button>
           </div>
-        </div>
+        </Callout>
       )}
 
       {/* Provenance honesty-flag panel — takes precedence over dispatcher question */}
       {provenanceFlagged && (
-        <div
-          className="rounded-md border-l-2 border p-4"
-          style={{
-            background: "var(--color-surface-1)",
-            borderColor: "var(--color-border)",
-            borderLeftColor: "var(--color-err)",
-          }}
-        >
-          <div className="text-sm font-medium mb-1" style={{ color: "var(--color-err)" }}>
-            Provenance audit flagged honesty issues
-          </div>
-          <p className="text-xs mb-3" style={{ color: "var(--color-fg-muted)" }}>
+        <Callout title="Provenance audit flagged honesty issues" tone="err">
+          <p className="mb-3">
             See the <strong>Provenance report</strong> tab for the specific{" "}
             <code className="text-xs">VERIFY:</code> notes or unchecked
             boundaries. Either re-draft with the flags as context, or accept
@@ -423,37 +406,24 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
               Accept the gap → user review
             </Button>
           </div>
-        </div>
+        </Callout>
       )}
 
-      {/* Dispatcher question answer textarea */}
+      {/* Dispatcher question answer textarea — accent tone (real CTA). */}
       {job.status === "awaiting_input" &&
         hasOpenDispatcherQuestion &&
         !provenanceFlagged && (
-          <div
-            className="rounded-md border-l-2 border p-4"
-            style={{
-              background: "var(--color-accent-bg)",
-              borderColor: "var(--color-border)",
-              borderLeftColor: "var(--color-accent)",
-            }}
-          >
-            <div className="text-sm font-medium mb-2">Answer the dispatcher question</div>
-            <p className="text-xs mb-2" style={{ color: "var(--color-fg-muted)" }}>
+          <Callout title="Answer the dispatcher question" tone="accent">
+            <p className="mb-2">
               Your answer is appended to <code>dispatcher_question.md</code>{" "}
               under a timestamped <code>## Answer</code> heading, then the
               dispatcher re-runs with the new context.
             </p>
-            <textarea
+            <CodeArea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-md border text-sm"
-              style={{
-                background: "var(--color-surface-2)",
-                fontFamily: "var(--font-mono)",
-                minHeight: 120,
-              }}
-              spellCheck={false}
+              surface="surface-2"
+              minHeight={120}
               placeholder="Your answer…"
             />
             <div className="mt-2 flex justify-end gap-2">
@@ -465,34 +435,21 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
                 {busy === "answer" ? "Submitting…" : "Submit + re-dispatch"}
               </Button>
             </div>
-          </div>
+          </Callout>
         )}
 
       {/* Request-changes panel for ready_for_user_review */}
       {requestChangesOpen && (
-        <div
-          className="rounded-md border-l-2 border p-4"
-          style={{
-            background: "var(--color-accent-bg)",
-            borderColor: "var(--color-border)",
-            borderLeftColor: "var(--color-accent)",
-          }}
-        >
-          <div className="text-sm font-medium mb-1">Request changes</div>
-          <p className="text-xs mb-2" style={{ color: "var(--color-fg-muted)" }}>
+        <Callout title="Request changes" tone="accent">
+          <p className="mb-2">
             Your notes are appended to <code>user_request.md</code> and the
             draft agent re-runs with them as feedback.
           </p>
-          <textarea
+          <CodeArea
             value={requestNotes}
             onChange={(e) => setRequestNotes(e.target.value)}
-            className="w-full px-2 py-1.5 rounded-md border text-sm"
-            style={{
-              background: "var(--color-surface-2)",
-              fontFamily: "var(--font-mono)",
-              minHeight: 100,
-            }}
-            spellCheck={false}
+            surface="surface-2"
+            minHeight={100}
             placeholder="What needs to change?"
           />
           <div className="mt-2 flex justify-end gap-2">
@@ -517,34 +474,29 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
               {busy === "request-changes" ? "Submitting…" : "Submit + re-draft"}
             </Button>
           </div>
-        </div>
+        </Callout>
       )}
 
       {/* Prep-workspace shortcut for jobs that have crossed into interview stages. */}
       {showPrepLink && job.company && (
-        <div
-          className="rounded-md border-l-2 border p-3 flex items-center justify-between gap-3"
-          style={{
-            background: "var(--color-accent-bg)",
-            borderColor: "var(--color-border)",
-            borderLeftColor: "var(--color-accent)",
-          }}
+        <Callout
+          tone="accent"
+          action={
+            <Link href={`/prep/${encodeURIComponent(job.company)}`}>
+              <Button
+                variant="primary"
+                icon={<NotebookText className="w-3 h-3" />}
+              >
+                Open prep workspace
+              </Button>
+            </Link>
+          }
         >
-          <div className="text-xs" style={{ color: "var(--color-fg-muted)" }}>
-            <strong style={{ color: "var(--color-fg)" }}>
-              Outcome: {job.outcome}
-            </strong>{" "}
-            — open the interview prep workspace for {job.company}.
-          </div>
-          <Link href={`/prep/${encodeURIComponent(job.company)}`}>
-            <Button
-              variant="primary"
-              icon={<NotebookText className="w-3 h-3" />}
-            >
-              Open prep workspace
-            </Button>
-          </Link>
-        </div>
+          <strong style={{ color: "var(--color-fg)" }}>
+            Outcome: {job.outcome}
+          </strong>{" "}
+          — open the interview prep workspace for {job.company}.
+        </Callout>
       )}
 
       {/* Action row — primary buttons + More overflow */}
