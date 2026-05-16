@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import { redirect } from "next/navigation";
-import { listJobs } from "@/lib/jobs/store";
+import { listJobs, readJob, deriveJobId } from "@/lib/jobs/store";
 import {
   COLUMNS,
   GROUP_LABELS,
@@ -8,7 +9,7 @@ import {
   groupJobsByStatus,
   type ColumnGroup,
 } from "@/lib/jobs/grouping";
-import { absWorkspace, TRUTH_BASE_FILES } from "@/lib/paths";
+import { absWorkspace, APPS_DIR, TRUTH_BASE_FILES } from "@/lib/paths";
 import { Dashboard } from "./dashboard";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function HomePage() {
 
   const [jobs, importPreview] = await Promise.all([
     listJobs(),
-    fetchImportPreview(),
+    countImportPreview(),
   ]);
   const grouped = groupJobsByStatus(jobs);
 
@@ -57,16 +58,42 @@ export default async function HomePage() {
   );
 }
 
-async function fetchImportPreview(): Promise<{ notImported: number; preview: Array<{ company: string; role: string }> }> {
-  // Call the API locally — same logic could be inlined, but reusing the
-  // route keeps the import counter and the dry-run identical.
+/**
+ * Same dry-run scan as /api/jobs/import/preview, but inlined so the
+ * dashboard doesn't have to HTTP-self-fetch its own route during SSR.
+ */
+async function countImportPreview(): Promise<{
+  notImported: number;
+  preview: Array<{ company: string; role: string }>;
+}> {
+  let companies: string[] = [];
   try {
-    const r = await fetch("http://127.0.0.1:3737/api/jobs/import/preview", {
-      cache: "no-store",
-    });
-    if (!r.ok) return { notImported: 0, preview: [] };
-    return await r.json();
-  } catch {
-    return { notImported: 0, preview: [] };
+    companies = (await fs.readdir(APPS_DIR, { withFileTypes: true }))
+      .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+      .map((d) => d.name);
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return { notImported: 0, preview: [] };
+    throw err;
   }
+
+  let notImported = 0;
+  const preview: Array<{ company: string; role: string }> = [];
+  for (const company of companies) {
+    let roles: string[] = [];
+    try {
+      roles = (await fs.readdir(path.join(APPS_DIR, company), { withFileTypes: true }))
+        .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+        .map((d) => d.name);
+    } catch {
+      continue;
+    }
+    for (const role of roles) {
+      const existing = await readJob(deriveJobId(company, role));
+      if (!existing) {
+        notImported++;
+        if (preview.length < 5) preview.push({ company, role });
+      }
+    }
+  }
+  return { notImported, preview };
 }

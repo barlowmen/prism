@@ -4,7 +4,10 @@ import { HealthView } from "./view";
 export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
-  const initial = await getHealth();
+  // Skip the slow Claude Code subprocess probe on initial render; the
+  // client fires a recheck via /api/health right after mount to fill in
+  // the auth card.
+  const initial = await getHealth({ skipAuthProbe: true });
   return (
     <main className="max-w-5xl mx-auto p-8">
       <header className="mb-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HealthReport } from "@/lib/health";
 
 type Tone = "ok" | "warn" | "err" | "muted";
@@ -32,6 +32,18 @@ export function HealthView({ initial }: { initial: HealthReport }) {
     }
   };
 
+  // Auto-run the slow Claude Code auth probe once after mount so the
+  // page paints fast and the auth card fills in shortly after. StrictMode
+  // double-mounts in dev — the ref guards against the duplicate call.
+  const autoRanRef = useRef(false);
+  useEffect(() => {
+    if (autoRanRef.current) return;
+    if (report.auth.ok !== "pending") return;
+    autoRanRef.current = true;
+    recheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const runConnectivityTest = async () => {
     setTesting(true);
     setTestError(null);
@@ -58,21 +70,24 @@ export function HealthView({ initial }: { initial: HealthReport }) {
     }
   };
 
-  const authBanner = !report.auth.ok ? (
-    <Banner tone="err">
-      <strong>Claude Code auth probe failed.</strong> {report.auth.error}. Run{" "}
-      <code>claude logout</code> then <code>claude login</code> and sign in
-      with your Pro/Max subscription.
-    </Banner>
-  ) : !report.auth.isSubscription ? (
-    <Banner tone="warn">
-      <strong>Claude Code is using <code>apiKeySource = {report.auth.apiKeySource}</code>.</strong>{" "}
-      This means API-key billing, not subscription. Unset{" "}
-      <code>ANTHROPIC_API_KEY</code> in your shell, then{" "}
-      <code>claude logout</code> and <code>claude login</code> with your
-      Pro/Max account.
-    </Banner>
-  ) : null;
+  const authBanner =
+    report.auth.ok === "pending" ? null : !report.auth.ok ? (
+      <Banner tone="err">
+        <strong>Claude Code auth probe failed.</strong> {report.auth.error}. Run{" "}
+        <code>claude logout</code> then <code>claude login</code> and sign in
+        with your Pro/Max subscription.
+      </Banner>
+    ) : !report.auth.isSubscription ? (
+      <Banner tone="warn">
+        <strong>
+          Claude Code is using <code>apiKeySource = {report.auth.apiKeySource}</code>.
+        </strong>{" "}
+        This means API-key billing, not subscription. Unset{" "}
+        <code>ANTHROPIC_API_KEY</code> in your shell, then{" "}
+        <code>claude logout</code> and <code>claude login</code> with your
+        Pro/Max account.
+      </Banner>
+    ) : null;
 
   return (
     <div>
@@ -108,7 +123,13 @@ export function HealthView({ initial }: { initial: HealthReport }) {
         </Card>
 
         <Card title="Subscription auth">
-          {report.auth.ok ? (
+          {report.auth.ok === "pending" ? (
+            <Row
+              label="Status"
+              value={busy ? "probing Claude Code…" : "probe pending"}
+              tone="muted"
+            />
+          ) : report.auth.ok ? (
             <>
               <Row
                 label="apiKeySource"

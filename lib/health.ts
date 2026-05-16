@@ -25,7 +25,8 @@ export type AuthProbe =
       durationMs: number;
       tokenTotals: { input: number; output: number; cacheRead: number; cacheCreation: number };
     }
-  | { ok: false; error: string; durationMs: number };
+  | { ok: false; error: string; durationMs: number }
+  | { ok: "pending" };
 
 export type FileCheck = {
   relPath: string;
@@ -113,12 +114,23 @@ async function probeAuth(): Promise<AuthProbe> {
   }
 }
 
-export async function getHealth(): Promise<HealthReport> {
+/**
+ * Build a full health report.
+ *
+ * The auth probe spawns a real Claude Code subprocess and takes ~3s. The
+ * default skips it so the server-rendered page paints fast; the client
+ * fires a fetch right after mount to run the probe via /api/health.
+ */
+export async function getHealth(
+  opts: { skipAuthProbe?: boolean } = {},
+): Promise<HealthReport> {
   const truthBaseSlugs = Object.keys(TRUTH_BASE_FILES) as TruthBaseSlug[];
 
   const [cli, auth, workspaceExists, truthBase, archetypes] = await Promise.all([
     getCliInfo(),
-    probeAuth(),
+    opts.skipAuthProbe
+      ? Promise.resolve<AuthProbe>({ ok: "pending" })
+      : probeAuth(),
     fs
       .stat(WORKSPACE_DIR)
       .then(() => true)
