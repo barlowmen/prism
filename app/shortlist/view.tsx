@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * Discovery candidates pending user triage. Each row offers three
+ * actions: Approve (spawn dispatcher), Skip (modal asks for an
+ * optional reason that becomes the status note), Hold (parks the job
+ * until the user comes back).
+ */
+
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";

@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * Tabular outcome tracker for jobs that have crossed the dispatcher
+ * gate. The outcome <select> is the primary input — anything in
+ * PREP_OUTCOMES (phone_screen / interview / offer) also reveals an
+ * inline "Prep" link to the per-company prep workspace.
+ */
+
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ExternalLink, NotebookText } from "lucide-react";

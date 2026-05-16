@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * "Paste a job" modal — top-right of the Dashboard. Two-mode form: just
+ * a URL (the dispatcher picks company/role from the JD) or URL +
+ * explicit company/role (used when the dispatcher's auto-naming would
+ * collide or be wrong). Optional raw JD text for dead URLs.
+ *
+ * The override section is a real <details>; closing it clears the
+ * company/role overrides from the request body so an accidentally-typed
+ * value doesn't override the dispatcher's auto-pick.
+ */
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field } from "./ui";

@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * App-wide context for the ⌘J assistant drawer. Holds the open/closed
+ * state plus a per-page snapshot (pathname + jobId + summary + extras)
+ * that the drawer sends with each message so the assistant knows what
+ * the user is looking at.
+ *
+ * Pages call usePageContext() at the top of their render to publish
+ * their snapshot — the hook auto-resets between navigations.
+ */
+
 import {
   createContext,
   useCallback,

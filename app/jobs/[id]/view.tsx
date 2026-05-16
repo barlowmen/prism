@@ -1,5 +1,20 @@
 "use client";
 
+/**
+ * Job-detail page client view. Two-tier tab navigation:
+ *   - Primary groups: Resume / Posting / Research / Audit / Notes / Debug
+ *   - Sub-tabs inside a group when it holds more than one file.
+ *
+ * The four orchestration outputs (HM feedback / feedback_history /
+ * provenance / etc.) live under Audit; the interview-feedback editor
+ * lives under Notes; meta and the all-files listing live under Debug.
+ *
+ * Markdown panes use server-rendered HTML from the page route; the
+ * DocxPane fetches mammoth-rendered HTML lazily via /docx; the
+ * InterviewFeedbackPane is a full inline editor with a synthesize-
+ * lessons agent shortcut at the bottom.
+ */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Row, StatusBadge, StatusDot } from "@/components/ui";

@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * Right-side ⌘J assistant drawer. Maintains one active thread, sends
+ * messages via /api/assistant/chat, and subscribes to the SSE stream
+ * for the in-flight assistant message. Renders user messages on the
+ * right with an accent-bg tint, assistant on the left, tool-use pills
+ * inline above the streamed text, and a pulsing accent dot while the
+ * agent is still talking.
+ *
+ * The page-aware context footer ("ctx: /path · jobId") is intentional
+ * transparency — the user can see exactly what hints the drawer is
+ * about to send.
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { useChat } from "./ChatContext";

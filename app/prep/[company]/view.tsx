@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * Per-company prep workspace UI. Two-tier tab navigation that maps
+ * onto the standard prep-pack shape (overview → 4 rounds → appendix
+ * → notes → other); the second tier appears only when a group has
+ * more than one file (e.g. CareFirst's 02-round-2/q*.md subdirectory).
+ *
+ * Each pane supports inline edit — Read shows server-rendered HTML;
+ * clicking Edit fetches the raw markdown and swaps in a textarea
+ * gated by the sandboxed /api/prep/<Company>/files PUT endpoint.
+ * Bootstrap + "Build with assistant" actions live in the top action
+ * row; both fire idempotent server-side operations.
+ */
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus, Save, Sparkles } from "lucide-react";

@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * Live-status pane for a single Claude Code run. Subscribes to the SSE
+ * stream at /api/agent-runs/<runId>/stream, shows a pulsing status dot,
+ * an elapsed-time counter, and a tail of recent events. Collapses to a
+ * single status line on completion.
+ *
+ * Used by JobActions and (indirectly) by the prep-builder action — any
+ * place that spawns a Claude Code run and wants to show "what's
+ * happening right now" without navigating to /settings/runs.
+ */
+
 import { useEffect, useRef, useState } from "react";
 
 type RunMeta = {

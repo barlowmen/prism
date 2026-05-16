@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * Top-level navigation. Four workflow links (Dashboard / Shortlist /
+ * Applications / Prep), a separator, a single "Settings" link that
+ * activates whenever the route is under /settings/*, and the ⌘J
+ * assistant toggle on the right.
+ *
+ * Active links carry both a surface-1 background pill and a 2px accent
+ * underline; the toggle inverts to primary-accent when the drawer is
+ * open so it reads as "this is doing something."
+ */
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";

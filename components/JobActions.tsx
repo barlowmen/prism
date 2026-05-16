@@ -1,5 +1,20 @@
 "use client";
 
+/**
+ * Right column of the job-detail page. State-machine view: shows
+ * contextual panels (reclassify, dispatcher question, request changes,
+ * provenance flagged) plus an action row whose buttons are derived
+ * from the job's current status.
+ *
+ * The action row renders 1-2 primary actions plus a "More" overflow
+ * details/summary popover for the rest — keeps the row from wrapping
+ * to two lines on hm_review and ready_for_user_review jobs.
+ *
+ * When a job's outcome crosses into phone_screen / interview / offer,
+ * a separate accent-bordered callout surfaces the "Open prep
+ * workspace" shortcut.
+ */
+
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
