@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: oklch(0.18 0.01 250);
+  --color-surface-1: oklch(0.22 0.01 250);
+  --color-surface-2: oklch(0.26 0.012 250);
+  --color-fg: oklch(0.92 0.005 250);
+  --color-fg-muted: oklch(0.68 0.01 250);
+  --color-border: oklch(0.32 0.01 250);
+  --color-accent: oklch(0.78 0.13 70);
+  --color-ok: oklch(0.78 0.13 160);
+  --color-warn: oklch(0.78 0.13 70);
+  --color-err: oklch(0.72 0.18 25);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+pre,
+code {
+  font-family: var(--font-mono);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ---- Markdown render panes (provenance, research, classification, etc.) ---- */
+
+.md-prose {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-fg);
+}
+.md-prose h1,
+.md-prose h2,
+.md-prose h3,
+.md-prose h4 {
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+.md-prose h1 { font-size: 1.4em; }
+.md-prose h2 { font-size: 1.2em; }
+.md-prose h3 { font-size: 1.05em; }
+.md-prose h4 { font-size: 1em; color: var(--color-fg-muted); }
+.md-prose > :first-child { margin-top: 0; }
+.md-prose p { margin: 0.6em 0; }
+.md-prose ul,
+.md-prose ol { margin: 0.6em 0; padding-left: 1.4em; }
+.md-prose li { margin: 0.2em 0; }
+.md-prose ul { list-style: disc; }
+.md-prose ol { list-style: decimal; }
+.md-prose blockquote {
+  border-left: 2px solid var(--color-border);
+  padding-left: 0.8em;
+  margin: 0.6em 0;
+  color: var(--color-fg-muted);
+}
+.md-prose code {
+  background: var(--color-surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.md-prose pre {
+  background: var(--color-surface-2);
+  padding: 0.8em 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+.md-prose pre code { background: transparent; padding: 0; }
+.md-prose a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.md-prose hr { border: 0; border-top: 1px solid var(--color-border); margin: 1.4em 0; }
+.md-prose table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 13px;
+}
+.md-prose th,
+.md-prose td {
+  border: 1px solid var(--color-border);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.md-prose th { background: var(--color-surface-2); font-weight: 600; }
+.md-prose strong { color: var(--color-fg); font-weight: 600; }
+
+/* ---- DOCX preview pane (mammoth output) ---- */
+
+.docx-prose {
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-fg);
+  max-width: 8.5in;
+  margin: 0 auto;
+}
+.docx-prose h1 { font-size: 1.35em; font-weight: 700; margin: 0.6em 0 0.2em; }
+.docx-prose h2 { font-size: 1.15em; font-weight: 600; margin: 1em 0 0.3em; border-bottom: 1px solid var(--color-border); padding-bottom: 0.2em; }
+.docx-prose h3 { font-size: 1em; font-weight: 600; margin: 0.7em 0 0.2em; }
+.docx-prose p { margin: 0.3em 0; }
+.docx-prose ul,
+.docx-prose ol { padding-left: 1.3em; margin: 0.3em 0; }
+.docx-prose ul { list-style: disc; }
+.docx-prose ol { list-style: decimal; }
+.docx-prose li { margin: 0.15em 0; }
+.docx-prose strong { font-weight: 600; }
+.docx-prose a { color: var(--color-accent); }
