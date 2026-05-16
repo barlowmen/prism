@@ -1,4 +1,13 @@
 import "server-only";
+/**
+ * Discovery agent — long-running scan of Greenhouse / Lever / Ashby
+ * boards plus HN "Who is hiring" and the YC board. Filters against
+ * the candidate's profile filters / red lines / comp floor and writes
+ * a shortlist to <workspace>/postings/job_postings_YYYY-MM-DD.md.
+ *
+ * Auto-creates Job records for each shortlisted posting so the
+ * Shortlist page picks them up immediately.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { INTERVIEWS_DIR, STATE_DIR } from "../paths";

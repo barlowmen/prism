@@ -1,4 +1,28 @@
 import "server-only";
+/**
+ * Three orchestrated agent phases that run after the dispatcher
+ * decides GO:
+ *
+ *   1. startResearch    — three parallel research subagents (JD analysis,
+ *                         company research, resume examples) writing
+ *                         into <folder>/research/. Auto-progresses to
+ *                         draft when done.
+ *   2. startDraft       — drafting agent: writes a tailored Node script
+ *                         that uses the docx library to build the final
+ *                         resume DOCX, runs it, leaves the DOCX in the
+ *                         per-app folder root. Optional feedback is
+ *                         baked in (HM-review loop, user-requested
+ *                         changes, provenance fix).
+ *   3. startHmReview    — hiring-manager review agent: roleplays as the
+ *                         actual hiring manager. Writes feedback.md
+ *                         (overwrite) + appends to feedback_history.md.
+ *                         Loops with redraftWithFeedback() until the
+ *                         agent says "ready to submit" or the user
+ *                         intervenes.
+ *
+ * Each phase updates the job's status + statusHistory through updateJob.
+ * Status transitions are documented in workflow.md.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { INTERVIEWS_DIR } from "../paths";

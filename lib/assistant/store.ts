@@ -1,4 +1,14 @@
 import "server-only";
+/**
+ * Disk persistence for ⌘J assistant threads. One JSON per thread under
+ * <workspace>/.state/assistant/<threadId>.json. Writes go through a
+ * per-thread in-process queue + atomic temp-and-rename, same pattern as
+ * lib/jobs/store.ts.
+ *
+ * `claudeSessionId` lives on the thread record so the launcher can use
+ * `--resume <session>` to continue a Claude Code conversation across
+ * messages — without it every message would start a fresh session.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

@@ -1,4 +1,16 @@
 import "server-only";
+/**
+ * Disk persistence for run metadata + every stream event.
+ *
+ * Layout under <workspace>/.state/:
+ *   runs.json                  — index of all runs (one line of meta per run)
+ *   runs/<runId>.log           — JSONL stream of every event for one run
+ *
+ * RunLogWriter buffers in-memory writes and flushes asynchronously so
+ * the broker can keep accepting stream events without await-on-fs on the
+ * hot path. The Runs page reads runs.json; the SSE replay path reads
+ * <runId>.log.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

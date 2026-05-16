@@ -1,4 +1,15 @@
 import "server-only";
+/**
+ * Orchestrator for the ⌘J assistant. Owns the lifecycle of one message
+ * round-trip: append the user message to the thread, build a prompt
+ * that includes the page-context snapshot, spawn a Claude Code run via
+ * the broker, and on completion persist the assistant's reply into the
+ * thread.
+ *
+ * Resumes the prior Claude Code session via `--resume` when the thread
+ * has a stored claudeSessionId — that's how the assistant maintains
+ * continuity across messages without paying re-prompt cost every turn.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

@@ -1,4 +1,18 @@
 import "server-only";
+/**
+ * On-disk store for archetypes — the base-resume + matching-hints
+ * config the dispatcher consults when picking which DOCX to start from
+ * for a given posting. One JSON file per archetype under
+ * <workspace>/_meta/archetypes/<key>.json.
+ *
+ * Writes go through a per-key in-process queue so concurrent updates
+ * don't drop. The on-disk write is atomic temp-and-rename — partial
+ * files never appear, even on power loss.
+ *
+ * Summaries (listSummaries) also stat the referenced base resume DOCX
+ * so the UI can show a "missing on disk" indicator without doing a
+ * separate fetch.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -7,6 +21,11 @@ import type { Archetype, ArchetypeSummary } from "./types";
 
 const ARCHETYPES_DIR = path.join(META_DIR, "archetypes");
 
+/**
+ * Per-key in-process write queue. Two concurrent updates for the same
+ * archetype get serialized; different archetypes go in parallel. Same
+ * pattern as the jobs store.
+ */
 const queues = new Map<string, Promise<unknown>>();
 
 async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {

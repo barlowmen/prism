@@ -1,4 +1,18 @@
 import "server-only";
+/**
+ * Dispatcher agent — the routing brain. Fetches a JD, classifies the
+ * posting against the candidate's profile filters, picks an archetype
+ * (the base resume to start from), and decides one of three outcomes:
+ * GO (auto-progress to research), NEEDS-DISCUSSION (write a question
+ * file and wait for the user), or RECOMMEND-SKIP (write a skip
+ * rationale and stop). Spec is documented in workflow.md §0.
+ *
+ * Also handles the "URL only" manual paste path: when the user pastes
+ * a URL without company/role, the dispatcher itself picks names from
+ * the JD and creates the apps/<Company>/<Role>/ folder. The
+ * orchestrator (routeAfterDispatch) patches the job record with the
+ * dispatcher's discovered company / role / chosen archetype.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

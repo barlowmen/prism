@@ -1,3 +1,21 @@
+/**
+ * Claude Code subprocess launcher — the single point of contact with
+ * the `claude` CLI. Spawns it with `--print --output-format=stream-json
+ * --verbose --permission-mode acceptEdits`, parses the stream-json
+ * events into typed AgentStreamEvents, aggregates token usage, and
+ * surfaces apiKeySource so the Runs / Health pages can flag any flip
+ * away from subscription billing.
+ *
+ * Why `--permission-mode acceptEdits`: without it, Claude Code stops at
+ * every tool-use that would write to disk and asks for permission —
+ * which never resolves in headless mode and the run hangs.
+ *
+ * Why we delete ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN: if the user
+ * has those set in their shell, the CLI prefers them over the saved
+ * subscription session and bills per-token. Scrubbing them here forces
+ * subscription auth every time; the canary value `apiKeySource: "none"`
+ * confirms it on each run.
+ */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 

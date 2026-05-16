@@ -1,3 +1,8 @@
+/**
+ * Run-broker type definitions. Persisted in .state/runs.json (one
+ * RunMetadata per run) and .state/runs/<runId>.log (RunLogLine per
+ * line, ordered by seq).
+ */
 import type { AgentPhase, AgentStreamEvent } from "../claude-launcher";
 
 export type RunStatus =

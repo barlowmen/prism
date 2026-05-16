@@ -1,4 +1,21 @@
 import "server-only";
+/**
+ * In-process broker for live Claude Code runs.
+ *
+ * Each call to startRun() spawns a Claude Code subprocess (via
+ * launchClaude), persists run metadata + every stream event to disk,
+ * and maintains an in-memory buffer plus a set of SSE listener
+ * callbacks. The SSE route at /api/agent-runs/<runId>/stream
+ * subscribes to this broker for live updates and falls back to
+ * replayFromDisk() when the broker no longer knows about the run
+ * (server restart between dispatch and reconnect).
+ *
+ * State transitions:
+ *   running → completed | failed | cancelled | timed_out
+ *
+ * Persistence is the source of truth — the Runs page and the disk
+ * replay path both read the same .state/runs/<runId>.log files.
+ */
 import { launchClaude, type AgentPhase, type AgentStreamEvent, type LaunchResult } from "../claude-launcher";
 import {
   RunLogWriter,

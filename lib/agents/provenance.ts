@@ -1,4 +1,17 @@
 import "server-only";
+/**
+ * Provenance audit agent. Reads the final tailored DOCX (via mammoth
+ * → text) and cross-checks every concrete claim against
+ * _meta/about_user.md. Surfaces fabricated numbers, claims that cross
+ * stated honesty red lines, and anything that needs verification.
+ *
+ * Writes provenance.md into the per-app folder; if it contains any
+ * VERIFY: notes or unchecked checkbox items, the job's status moves
+ * to awaiting_input so JobActions can surface the flagged panel.
+ *
+ * acceptProvenanceGap() is the explicit user override — flags stay on
+ * disk as a paper trail, status advances anyway.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { INTERVIEWS_DIR } from "../paths";

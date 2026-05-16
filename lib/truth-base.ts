@@ -1,4 +1,12 @@
 import "server-only";
+/**
+ * Read/write for the three allowlisted truth-base files
+ * (about_user / style_guide / workflow). Slugs are gated against
+ * TRUTH_BASE_FILES in paths.ts so the API can't be tricked into
+ * writing arbitrary paths under _meta/. Writes are atomic
+ * temp-and-rename, and the previous version is backed up under
+ * _meta/.prism-backups/ before each replace.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

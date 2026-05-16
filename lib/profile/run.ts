@@ -1,4 +1,15 @@
 import "server-only";
+/**
+ * Orchestrator for the Profile Interview — one focused chat thread per
+ * section of about_user.md. Reads the section's brief + the current
+ * about_user.md as priors, spawns a Claude Code run whose job is to
+ * converge on a markdown draft of that section emitted as a
+ * <draft>...</draft> block.
+ *
+ * The latest <draft> block from each run is parsed out and stored on
+ * the section state so the right pane of /settings/profile/<key> can
+ * render the live draft alongside the chat.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";

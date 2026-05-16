@@ -1,4 +1,15 @@
 import "server-only";
+/**
+ * Pre-flight system-health probe for the /settings/health page.
+ *
+ * Four checks: claude CLI installed, subscription auth probe (spawns a
+ * real one-shot Claude Code run — ~3s), truth-base files on disk, base
+ * resumes per archetype on disk.
+ *
+ * The auth probe is the slow part. The HealthPage server-renders with
+ * skipAuthProbe=true so it paints fast; the client kicks /api/health
+ * after mount to fill in the auth card.
+ */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
