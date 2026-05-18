@@ -59,8 +59,10 @@ cmd_start() {
     echo "dev" >"$MODE_FILE"
     echo "starting in DEV on http://$HOST:$PORT (pid $!), logs: $LOG"
     # Dev needs a longer ready window because the first request compiles routes.
+    # On a fresh install / is a 307 redirect to the profile interview, so we
+    # accept any 2xx or 3xx, not just 200.
     for _ in $(seq 1 30); do
-      if curl -sS -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/" 2>/dev/null | grep -q "^200"; then
+      if curl -sS -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/" 2>/dev/null | grep -qE "^[23]"; then
         echo "ready"
         return 0
       fi
@@ -83,7 +85,7 @@ cmd_start() {
   echo "prod" >"$MODE_FILE"
   echo "starting in PROD on http://$HOST:$PORT (pid $!), logs: $LOG"
   for _ in $(seq 1 20); do
-    if curl -sS -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/" 2>/dev/null | grep -q "^200"; then
+    if curl -sS -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/" 2>/dev/null | grep -qE "^[23]"; then
       echo "ready"
       return 0
     fi
