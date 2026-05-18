@@ -13,7 +13,8 @@ the engine.
 
 ## What it does
 
-1. You **paste a job posting URL** (or run discovery against ATS boards).
+1. You **paste a job posting URL** — or paste a list of 10+ URLs at
+   once in bulk mode — or run discovery against ATS boards.
 2. A **dispatcher agent** fetches the JD, picks one of your *archetypes*
    (e.g. AI-leaning vs cloud-infra-leaning), and decides GO /
    NEEDS-DISCUSSION / RECOMMEND-SKIP based on your profile's filter rules.
@@ -71,8 +72,7 @@ that builds `_meta/about_user.md`. Once you have a few sections committed,
 set up at least one **Archetype** (a base resume DOCX + matching hints) and
 you're ready to paste your first job.
 
-See [SETUP.md](./SETUP.md) for the full first-time setup walkthrough,
-including how to migrate an existing workflow into prism.
+See [SETUP.md](./SETUP.md) for the full first-time setup walkthrough.
 
 ---
 
@@ -105,16 +105,26 @@ data, JDs, and notes never sit inside the codebase.
 
 ## Why subscription, not API
 
-As of April 2026, Anthropic explicitly cut subscription-quota access for
-third-party tools. Pro/Max quota is reachable only from **Claude Code CLI,
-claude.ai, Claude Desktop, and Cowork**. Any backend that calls the
-Anthropic API directly is billed per-token regardless of subscription.
+In April 2026 Anthropic cut subscription-quota access for third-party
+tools and harnesses; the policy was revised in May/June with a split
+billing model. The current state is that Anthropic's *first-party*
+tools — Claude Code CLI, claude.ai, Claude Desktop — still use your
+full Pro/Max subscription quota, while third-party agents and SDK
+callers get a separate, much smaller monthly credit pool billed at
+API rates. Backends that call the Anthropic API directly are billed
+per-token regardless of subscription. See:
 
-So prism's launcher (`lib/claude-launcher.ts`) is the only place in the
-codebase that touches Claude. It spawns `claude` as a subprocess with
-`--print --output-format=stream-json --verbose --permission-mode acceptEdits`,
-deletes `ANTHROPIC_API_KEY` from the subprocess env, and parses
-stream-json events into per-event records the UI streams via SSE.
+- [Anthropic cuts off the ability to use Claude subscriptions with OpenCode and third-party AI agents](https://venturebeat.com/technology/anthropic-cuts-off-the-ability-to-use-claude-subscriptions-with-openclaw-and) — VentureBeat, April 2026 (initial cut)
+- [Anthropic reinstates OpenCode and third-party agent usage on Claude subscriptions — with a catch](https://venturebeat.com/technology/anthropic-reinstates-openclaw-and-third-party-agent-usage-on-claude-subscriptions-with-a-catch) — VentureBeat (the split-billing reversal)
+- [Anthropic tosses agents into the API billing pool](https://www.theregister.com/ai-ml/2026/05/14/anthropic-tosses-agents-into-the-api-billing-pool/5240748) — The Register, May 2026
+- [Anthropic blocks third-party use of Claude Code subscriptions](https://news.ycombinator.com/item?id=46549823) — Hacker News discussion
+
+That's why prism's launcher (`lib/claude-launcher.ts`) is the only
+place in the codebase that touches Claude. It spawns `claude` as a
+subprocess with `--print --output-format=stream-json --verbose
+--permission-mode acceptEdits`, deletes `ANTHROPIC_API_KEY` from the
+subprocess env, and parses stream-json events into per-event records
+the UI streams via SSE.
 
 The `apiKeySource: "none"` value in each run's metadata is the canary —
 if it ever flips to anything else, the Health page surfaces a yellow

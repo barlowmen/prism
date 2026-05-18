@@ -1,8 +1,7 @@
 # Setting up prism
 
 This walks you through a clean install plus the first-time setup of your
-workspace. If you're migrating from an existing manual job-application
-workflow, see **§4 — Migrating an existing workspace** at the bottom.
+workspace.
 
 ---
 
@@ -131,8 +130,10 @@ Visit **Archetypes** in the nav. For each:
 3. Fill in **Matching hints** — markdown describing JD signals that
    should route a posting here. The dispatcher reads this verbatim.
 
-You can also use `interviews/_meta/` style legacy resumes in
-`_resumes/Foo_AI.docx` etc.; the file path is configurable per archetype.
+The DOCX path is configurable per archetype. If you already have base
+resumes named `*_AI.docx` / `*_Cloud.docx` under your workspace's
+`_resumes/`, the **Seed from existing `_resumes/`** action on the
+Archetypes page creates `ai` and `cloud` archetypes pointing at them.
 
 ---
 
@@ -142,6 +143,12 @@ From the dashboard, **Paste a job** (top-right). Paste the URL. The
 dispatcher fetches the JD, picks your archetype, classifies, and either
 auto-progresses to research → draft → HM review → provenance, or asks
 you a clarifying question.
+
+Have a list of postings? Flip the modal's **Single / Bulk** toggle to
+paste many URLs at once (one per line; `#` comments and blank lines
+ignored). A concurrency dropdown caps how many dispatchers run in
+parallel — default 2, max 5. The modal returns a summary table linking
+to each new job's detail page, and the runs continue in the background.
 
 The whole chain runs on subscription quota. Token totals are visible per
 run on the **Runs** page.
@@ -158,29 +165,6 @@ you can ignore it and rely on **Paste a job**.
 
 ---
 
-## §4. Migrating an existing workspace
-
-If you already have an `interviews/` directory from the manual workflow
-that pre-dates prism:
-
-1. **Point `PRISM_WORKSPACE` at it** instead of creating a new directory.
-2. **Rename `_meta/about_john.md` → `_meta/about_user.md`** (or whatever
-   `<your_name>.md` was). The Truth Base editor and every agent reads
-   `about_user.md` only.
-3. **Seed archetypes from your existing `_resumes/`**: on the Archetypes
-   page click "Seed from existing `_resumes/`" — if your DOCXes are
-   named `*_AI.docx` / `*_Cloud.docx`, prism creates `ai` and `cloud`
-   archetypes pointing at them. Otherwise create them manually.
-4. **Import existing per-application folders**: on the dashboard, the
-   import banner offers to scan `apps/` and create a tracked Job for
-   each folder, with a reclassify suggestion based on file presence.
-
-The existing CLI-driven workflow (`claude` from a terminal pointing at
-the workspace) continues to work in parallel — prism writes to the same
-files in the same formats.
-
----
-
 ## Troubleshooting
 
 - **Dev server fails to start.** Check `.server.log`. Common causes:
@@ -193,4 +177,4 @@ files in the same formats.
   prism that's missing `--permission-mode acceptEdits`. Pull latest.
 - **Profile Interview chat doesn't stream.** Check the **Runs** page for
   the underlying agent run. If the run failed, the error is in
-  `interviews/.state/runs/<runId>.log`.
+  `<your_workspace>/.state/runs/<runId>.log`.
