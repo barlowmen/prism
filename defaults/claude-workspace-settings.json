@@ -1,12 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebSearch",
+      "WebFetch"
     ]
   },
   "_prism": {
     "managedBy": "prism — lib/system-files.ts",
-    "purpose": "Pre-approves `node` for the base-resume + per-job draft pipelines so the first run in a fresh workspace doesn't hit a denied-by-default permission gate. The agents run a tailored docx-builder script with node; without this, headless mode has no UI to approve the prompt and the DOCX never gets produced.",
-    "safeToEdit": "Yes — your own additions to permissions.allow stay if you re-seed (system-files.ts only writes this file when it's absent)."
+    "purpose": "Pre-approves the tools prism's agents need so first runs in a fresh workspace don't hit the headless permission gate (acceptEdits mode only auto-approves Edit/Write, and there's no UI to answer interactive approval prompts).\n\n- Bash(node:*) — base-resume + per-job draft agents shell out to node to build the DOCX.\n- WebSearch — discovery scans HackerNews 'Who is hiring', YC job board, etc.; per-job research subagents check JD framing, company news.\n- WebFetch — discovery fetches Greenhouse/Lever/Ashby JSON; per-job dispatcher fetches the posting URL; research subagents pull company pages.",
+    "safeToEdit": "Yes — your own additions to permissions.allow stay if you re-seed (system-files.ts only writes this file when it's absent). To restrict WebFetch by domain, replace the bare \"WebFetch\" entry with e.g. \"WebFetch(domain:greenhouse.io)\", \"WebFetch(domain:lever.co)\", etc."
   }
 }
