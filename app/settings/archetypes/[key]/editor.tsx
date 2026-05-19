@@ -149,6 +149,28 @@ export function ArchetypeEditor({
     }
   };
 
+  const onCancelInFlight = async () => {
+    if (!confirm("Cancel the in-flight base-resume agent? The subprocess will be killed.")) return;
+    setErr(null);
+    setMsg(null);
+    try {
+      const r = await fetch(
+        `/api/archetypes/${encodeURIComponent(initial.key)}/cancel-base`,
+        { method: "POST" },
+      );
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErr(data?.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      setActiveRunId(null);
+      setMsg("Cancelled. Click Generate base resume to start fresh.");
+      router.refresh();
+    } catch (e) {
+      setErr(String(e));
+    }
+  };
+
   const onPick = () => fileRef.current?.click();
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,6 +265,7 @@ export function ArchetypeEditor({
         onGenerate={onGenerate}
         onAcceptAnyway={onAcceptAnyway}
         onRestart={onRestart}
+        onCancelInFlight={onCancelInFlight}
         onToggleHistoricRun={() => setShowHistoricRun((v) => !v)}
       />
 
@@ -350,6 +373,7 @@ function BaseGenerationPanel({
   onGenerate,
   onAcceptAnyway,
   onRestart,
+  onCancelInFlight,
   onToggleHistoricRun,
 }: {
   archetypeKey: string;
@@ -365,6 +389,7 @@ function BaseGenerationPanel({
   onGenerate: () => void;
   onAcceptAnyway: () => void;
   onRestart: () => void;
+  onCancelInFlight: () => void;
   onToggleHistoricRun: () => void;
 }) {
   const transient = status === "generating" || status === "reviewing";
@@ -405,7 +430,15 @@ function BaseGenerationPanel({
       )}
 
       {transient && (
-        <Callout tone="accent" title={status === "generating" ? `Generating draft (pass ${pass || 1})…` : `HM reviewing (pass ${pass})…`}>
+        <Callout
+          tone="accent"
+          title={status === "generating" ? `Generating draft (pass ${pass || 1})…` : `HM reviewing (pass ${pass})…`}
+          action={
+            <Button onClick={onCancelInFlight} variant="danger">
+              Cancel
+            </Button>
+          }
+        >
           <span className="inline-flex items-center gap-2">
             <span className="relative inline-flex w-2 h-2">
               <span

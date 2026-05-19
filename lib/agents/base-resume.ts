@@ -37,7 +37,7 @@ import {
 } from "../archetypes/store";
 import { readArchetypePlaybookBody } from "../archetypes/scaffold";
 import { loadPrompt } from "../prompt-template";
-import { startRun, getRunSnapshot } from "../runs/broker";
+import { startRun, getRunSnapshot, cancelRun } from "../runs/broker";
 import type { RunMetadata } from "../runs/types";
 
 const GENERATION_TIMEOUT_MS = 12 * 60 * 1000;
@@ -178,6 +178,11 @@ async function routeAfterBaseGeneration(
   archetypeKey: string,
   runId: string,
 ): Promise<void> {
+  // If the user cancelled or restarted before this run finished, the
+  // archetype's baseLatestRunId no longer points at this run. Skip the
+  // routing so we don't clobber the state the cancel/reset endpoint
+  // just wrote.
+  if (await runStale(archetypeKey, runId)) return;
   // Verify the DOCX landed before kicking review. If the agent failed to
   // produce one we shouldn't waste a review pass on nothing.
   const docxRel = baseDocxRel(archetypeKey);
@@ -282,6 +287,10 @@ async function routeAfterBaseReview(
   archetypeKey: string,
   runId: string,
 ): Promise<void> {
+  // Same staleness guard as routeAfterBaseGeneration — if the user
+  // cancelled or restarted before this review finished, don't overwrite
+  // their decision.
+  if (await runStale(archetypeKey, runId)) return;
   // Extract verdict from broker's structured payload first; fall back to
   // parsing the feedback file for the explicit verdict line.
   let verdict: "ready_to_submit" | "needs_revision" | null = null;
@@ -345,7 +354,46 @@ async function routeAfterBaseReview(
   await spawnBaseGenerationRun({ archetypeKey, feedback });
 }
 
+/**
+ * True if the archetype's latest run pointer has moved on since this
+ * `runId` was spawned — meaning the user cancelled, restarted, or
+ * otherwise advanced state. Used by the routeAfter handlers to avoid
+ * clobbering whatever state the cancel/reset endpoint just wrote.
+ */
+async function runStale(archetypeKey: string, runId: string): Promise<boolean> {
+  const a = await readArchetype(archetypeKey);
+  if (!a) return true;
+  if (!a.baseLatestRunId) return true;
+  return a.baseLatestRunId !== runId;
+}
+
 /* ------------------------- public manual overrides ------------------------- */
+
+/**
+ * User clicked Cancel on a transient (generating / reviewing)
+ * archetype. Kill the underlying Claude Code subprocess via the broker,
+ * then write archetype state back to `none` with a note. The
+ * orchestrator's done-handlers will fire on the killed subprocess but
+ * `runStale` will see baseLatestRunId has been cleared and skip the
+ * routing — so the cancel decision sticks.
+ */
+export async function cancelBaseGeneration(archetypeKey: string): Promise<void> {
+  const archetype = await readArchetype(archetypeKey);
+  if (!archetype) throw new Error(`archetype_not_found:${archetypeKey}`);
+  const runId = archetype.baseLatestRunId;
+  if (!runId) {
+    // Nothing in flight — quietly normalize state.
+    await updateArchetypeBaseState(archetypeKey, { baseStatus: "none" });
+    return;
+  }
+  await cancelRun(runId).catch(() => {});
+  await updateArchetypeBaseState(archetypeKey, {
+    baseStatus: "none",
+    baseLatestRunId: null,
+    baseReviewPass: 0,
+    baseLastFeedback: `cancelled by user (runId ${runId.slice(0, 8)})`,
+  });
+}
 
 /**
  * User reviewed a stalled run's feedback and decided the resume is good
