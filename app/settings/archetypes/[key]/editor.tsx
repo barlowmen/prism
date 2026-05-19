@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { Area, Button, Field } from "@/components/ui";
+import { AlertTriangle, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
+import { Area, Button, Callout, Field } from "@/components/ui";
+import { AgentRunPane } from "@/components/AgentRunPane";
 import type { Archetype } from "@/lib/archetypes/types";
 
 export function ArchetypeEditor({
@@ -22,9 +24,17 @@ export function ArchetypeEditor({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  // Track the run we just spawned so AgentRunPane mounts even before
+  // the next router.refresh() reflects baseLatestRunId on the server side.
+  const [activeRunId, setActiveRunId] = useState<string | null>(
+    initial.baseStatus === "generating" || initial.baseStatus === "reviewing"
+      ? initial.baseLatestRunId ?? null
+      : null,
+  );
 
   const dirty =
     label !== initial.label ||
@@ -54,6 +64,84 @@ export function ArchetypeEditor({
       setErr(String(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const kickGeneration = async (overwrite: boolean) => {
+    setGenerating(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      const r = await fetch(
+        `/api/archetypes/${encodeURIComponent(initial.key)}/generate-base`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ overwrite }),
+        },
+      );
+      const data = await r.json();
+      if (!r.ok) {
+        if (r.status === 409 && data?.error === "base_already_exists") {
+          if (
+            confirm(
+              `A base resume already exists at ${data.baseResumePath}. ` +
+                `Generating will overwrite it on completion. Continue?`,
+            )
+          ) {
+            await kickGeneration(true);
+            return;
+          }
+          return;
+        }
+        setErr(data?.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      setActiveRunId(data.runId);
+      setMsg("Generation started.");
+      router.refresh();
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const onGenerate = () => kickGeneration(false);
+
+  const onAcceptAnyway = async () => {
+    setErr(null);
+    setMsg(null);
+    try {
+      const r = await fetch(
+        `/api/archetypes/${encodeURIComponent(initial.key)}/accept-base-anyway`,
+        { method: "POST" },
+      );
+      const data = await r.json();
+      if (!r.ok) {
+        setErr(data?.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      setMsg("Accepted. Base is now ready.");
+      setActiveRunId(null);
+      router.refresh();
+    } catch (e) {
+      setErr(String(e));
+    }
+  };
+
+  const onRestart = async () => {
+    if (!confirm("Reset the generation state and start a new run?")) return;
+    setErr(null);
+    setMsg(null);
+    try {
+      await fetch(
+        `/api/archetypes/${encodeURIComponent(initial.key)}/reset-base`,
+        { method: "POST" },
+      );
+      await kickGeneration(true);
+    } catch (e) {
+      setErr(String(e));
     }
   };
 
@@ -137,6 +225,29 @@ export function ArchetypeEditor({
         help="Augments about_user.md's tailoring playbook. The draft agent reads this when generating a resume from this base."
       />
 
+      <BaseGenerationPanel
+        archetypeKey={initial.key}
+        archetypeLabel={initial.label}
+        status={initial.baseStatus}
+        pass={initial.baseReviewPass}
+        generatedAt={initial.baseGeneratedAt}
+        lastFeedback={initial.baseLastFeedback}
+        hasBase={!!baseResumePath}
+        generating={generating}
+        onGenerate={onGenerate}
+        onAcceptAnyway={onAcceptAnyway}
+        onRestart={onRestart}
+      />
+
+      {activeRunId && (
+        <AgentRunPane
+          runId={activeRunId}
+          onCompleted={() => {
+            router.refresh();
+          }}
+        />
+      )}
+
       <section
         className="rounded-md border p-4"
         style={{
@@ -211,6 +322,174 @@ export function ArchetypeEditor({
         </Button>
       </div>
     </div>
+  );
+}
+
+function BaseGenerationPanel({
+  archetypeKey,
+  archetypeLabel,
+  status,
+  pass,
+  generatedAt,
+  lastFeedback,
+  hasBase,
+  generating,
+  onGenerate,
+  onAcceptAnyway,
+  onRestart,
+}: {
+  archetypeKey: string;
+  archetypeLabel: string;
+  status: Archetype["baseStatus"];
+  pass: number;
+  generatedAt: string | null;
+  lastFeedback: string;
+  hasBase: boolean;
+  generating: boolean;
+  onGenerate: () => void;
+  onAcceptAnyway: () => void;
+  onRestart: () => void;
+}) {
+  const transient = status === "generating" || status === "reviewing";
+
+  return (
+    <section
+      className="rounded-md border p-4"
+      style={{ background: "var(--color-surface-1)" }}
+    >
+      <div className="text-sm font-medium mb-1">Generate base resume</div>
+      <div
+        className="text-xs mb-3"
+        style={{ color: "var(--color-fg-muted)" }}
+      >
+        Spawns the base-resume agent: reads <code className="text-xs">about_user.md</code>,
+        the {archetypeLabel} playbook subsection, and the style guide, then
+        produces a DOCX. A second pass acts as a hiring manager for this
+        archetype's role family and either approves the resume or sends
+        feedback for a re-draft.
+      </div>
+
+      {status === "ready" && (
+        <Callout
+          tone="info"
+          title={
+            <span
+              className="inline-flex items-center gap-1.5"
+              style={{ color: "var(--color-ok)" }}
+            >
+              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+              Base resume ready
+            </span>
+          }
+        >
+          Generated {generatedAt ? new Date(generatedAt).toLocaleString() : ""}
+          {pass > 0 && ` · approved on pass ${pass}`}
+        </Callout>
+      )}
+
+      {transient && (
+        <Callout tone="accent" title={status === "generating" ? `Generating draft (pass ${pass || 1})…` : `HM reviewing (pass ${pass})…`}>
+          <span className="inline-flex items-center gap-2">
+            <span className="relative inline-flex w-2 h-2">
+              <span
+                className="absolute inset-0 rounded-full animate-ping"
+                style={{ background: "var(--color-accent)", opacity: 0.6 }}
+              />
+              <span
+                className="relative inline-block w-2 h-2 rounded-full"
+                style={{ background: "var(--color-accent)" }}
+              />
+            </span>
+            {status === "generating"
+              ? "The base-resume agent is drafting the DOCX."
+              : "The HM-review agent is screening the draft against the archetype bar."}
+          </span>
+        </Callout>
+      )}
+
+      {status === "stalled" && (
+        <Callout
+          tone="warn"
+          title={`5 review passes — still needs revision`}
+          action={
+            <div className="flex items-center gap-2">
+              <Button variant="primary" onClick={onAcceptAnyway}>
+                Accept anyway
+              </Button>
+              <Button onClick={onRestart} icon={<RotateCcw className="w-3 h-3" />}>
+                Restart
+              </Button>
+            </div>
+          }
+        >
+          The HM-review loop kept returning <em>needs revision</em>. Read the
+          feedback below and either accept the latest draft as-is, or restart
+          generation (the orchestrator will re-read the playbook and try
+          again).
+          {lastFeedback && (
+            <details className="mt-2">
+              <summary
+                className="cursor-pointer text-xs select-none"
+                style={{ color: "var(--color-fg-muted)" }}
+              >
+                Show last HM feedback
+              </summary>
+              <pre
+                className="mt-2 p-2 rounded text-[11px] whitespace-pre-wrap"
+                style={{
+                  background: "var(--color-surface-2)",
+                  color: "var(--color-fg-muted)",
+                  maxHeight: "300px",
+                  overflow: "auto",
+                }}
+              >
+                {lastFeedback}
+              </pre>
+            </details>
+          )}
+        </Callout>
+      )}
+
+      {status === "errored" && (
+        <Callout
+          tone="err"
+          title="Base generation errored"
+          action={
+            <Button onClick={onRestart} icon={<RotateCcw className="w-3 h-3" />}>
+              Restart
+            </Button>
+          }
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+            {lastFeedback || "Unknown error — check the Runs page."}
+          </span>
+        </Callout>
+      )}
+
+      <div className="flex items-center gap-2 mt-3">
+        <Button
+          variant={hasBase ? "secondary" : "primary"}
+          onClick={onGenerate}
+          disabled={generating || transient}
+          icon={<Sparkles className="w-3 h-3" />}
+        >
+          {generating
+            ? "Starting…"
+            : transient
+              ? "Running…"
+              : hasBase
+                ? "Re-generate base"
+                : "Generate base resume"}
+        </Button>
+        <span
+          className="text-[11px] font-mono"
+          style={{ color: "var(--color-fg-muted)" }}
+        >
+          archetype: {archetypeKey}
+        </span>
+      </div>
+    </section>
   );
 }
 

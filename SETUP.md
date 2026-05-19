@@ -138,15 +138,42 @@ nothing in it gets changed. Existing archetype records are left alone
 (idempotent — safe to re-run).
 
 After scaffolding, open each archetype and:
-1. **Upload a base resume DOCX** — required to activate. The file lands
-   in `<workspace>/_resumes/`. The draft agent starts from this DOCX
-   and tailors it per job.
+1. **Upload a base resume DOCX** — or *generate one automatically* (see
+   the next subsection). Either way, the file lands in
+   `<workspace>/_resumes/`. The draft agent starts from this DOCX and
+   tailors it per job.
 2. *(Optional)* Refine the **Matching hints** — the auto-generated
    block is a starter. Add specific company names, role keywords, JD
    phrases that should route to this archetype.
 3. *(Optional)* Fill **Tailoring rules** — archetype-specific deltas
    the draft agent reads on top of `about_user.md`. Usually unnecessary
    if your profile's playbook already covers tailoring per archetype.
+
+### Generate base resumes
+
+After scaffolding, the Archetypes page shows an accent **Generate all
+bases** button at the top. Click it: prism spawns a Claude Code agent
+per archetype that drafts a long-form base resume from
+`about_user.md` + the archetype's tailoring-playbook entry, then runs
+an HM review loop (up to 5 passes) against the median hiring-manager
+bar for that archetype's role family. Default concurrency is 2
+archetypes in flight at a time (max 5).
+
+Each archetype card flips through `drafting → HM review → drafting`
+(if revisions are needed) until it lands on a green check `ready`
+state, typically within 3–5 minutes. The banner refreshes every 5
+seconds while runs are active.
+
+If a loop stalls after 5 passes, the card surfaces **Accept anyway**
+(promote the latest draft as-is) and **Restart** (clear state and try
+again) so you can intervene. You can also click **Generate base
+resume** on an individual archetype's edit page to run it one at a
+time — useful for re-generating a specific archetype after editing
+its tailoring rules.
+
+These bases are the long-form "as-applied-to-this-archetype"
+versions. The per-job dispatcher and draft agents (see workflow.md
+§0 and §4) start from them and tailor down per posting.
 
 ### Manual route
 

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 import { Button, Callout } from "@/components/ui";
-import type { ArchetypeSummary } from "@/lib/archetypes/types";
+import type { ArchetypeSummary, BaseStatus } from "@/lib/archetypes/types";
 
 type ScaffoldPreview = {
   profileFound: boolean;
@@ -30,8 +30,58 @@ export function ArchetypesList({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const missingBaseCount = initial.filter(
+    (a) => !a.baseResumePath || a.baseStatus === "none",
+  ).length;
+  const activeArchetypes = initial.filter(
+    (a) => a.baseStatus === "generating" || a.baseStatus === "reviewing",
+  );
+
+  // Poll while any archetype is in a transient state. The bulk endpoint
+  // is fire-and-forget on the server — the only way the UI learns about
+  // progress is by re-reading the archetype JSONs.
+  useEffect(() => {
+    if (activeArchetypes.length === 0) return;
+    const t = setInterval(() => {
+      router.refresh();
+    }, 5000);
+    return () => clearInterval(t);
+  }, [activeArchetypes.length, router]);
+
+  const runBulkGenerate = async () => {
+    setBulkBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      const r = await fetch("/api/archetypes/generate-all-bases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setErr(data?.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      if (data.queued.length === 0) {
+        setMsg("Nothing to queue — every archetype already has a base.");
+      } else {
+        setMsg(
+          `Queued ${data.queued.length} archetype${data.queued.length === 1 ? "" : "s"}: ${data.queued.join(", ")}. ` +
+            `Each will run generate → HM review until ready (or stalled at pass 5).`,
+        );
+      }
+      router.refresh();
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const runScaffold = async () => {
     setBusy(true);
@@ -179,6 +229,48 @@ export function ArchetypesList({
         </>
       )}
 
+      {activeArchetypes.length > 0 ? (
+        <Callout
+          tone="info"
+          title={`${activeArchetypes.length} archetype${
+            activeArchetypes.length === 1 ? "" : "s"
+          } generating base resumes…`}
+        >
+          {activeArchetypes
+            .map(
+              (a) =>
+                `${a.label} (${a.baseStatus === "generating" ? "drafting" : "HM review"}, pass ${a.baseReviewPass || 1})`,
+            )
+            .join(" · ")}
+          . Each loop runs draft → HM review → maybe redraft, up to 5 passes.
+          This banner refreshes automatically.
+        </Callout>
+      ) : missingBaseCount > 0 ? (
+        <Callout
+          tone="accent"
+          title={`${missingBaseCount} archetype${missingBaseCount === 1 ? "" : "s"} ${
+            missingBaseCount === 1 ? "has" : "have"
+          } no base resume yet`}
+          action={
+            <Button
+              variant="primary"
+              onClick={runBulkGenerate}
+              disabled={bulkBusy}
+              icon={<Sparkles className="w-3 h-3" />}
+            >
+              {bulkBusy ? "Queuing…" : "Generate all bases"}
+            </Button>
+          }
+        >
+          Generate all bases spawns the base-resume agent for every archetype
+          without a DOCX, capped at 2 in parallel. Each goes through a
+          draft → HM-review loop (up to 5 passes). Re-generate individual
+          ones from each archetype's edit page.
+        </Callout>
+      ) : null}
+
+      <Messages msg={msg} err={err} />
+
       <ul className="space-y-2">
         {initial.map((a) => (
           <li
@@ -186,9 +278,16 @@ export function ArchetypesList({
             className="rounded-md border p-4"
             style={{
               background: "var(--color-surface-1)",
-              borderColor: a.baseResumeExists
-                ? "var(--color-border)"
-                : "var(--color-warn)",
+              borderColor:
+                a.baseStatus === "errored"
+                  ? "var(--color-err)"
+                  : a.baseStatus === "stalled"
+                    ? "var(--color-warn)"
+                    : a.baseStatus === "generating" || a.baseStatus === "reviewing"
+                      ? "var(--color-accent)"
+                      : a.baseResumeExists
+                        ? "var(--color-border)"
+                        : "var(--color-warn)",
             }}
           >
             <div className="flex items-start justify-between gap-4">
@@ -223,36 +322,12 @@ export function ArchetypesList({
                   </p>
                 )}
                 <div
-                  className="mt-2 flex items-center gap-3 text-[11px] font-mono"
+                  className="mt-2 flex items-center gap-3 text-[11px] font-mono flex-wrap"
                   style={{ color: "var(--color-fg-muted)" }}
                 >
-                  {a.baseResumePath ? (
-                    <>
-                      <span>{a.baseResumePath}</span>
-                      <span
-                        className="inline-flex items-center gap-1"
-                        style={{
-                          color: a.baseResumeExists
-                            ? "var(--color-ok)"
-                            : "var(--color-warn)",
-                        }}
-                      >
-                        {!a.baseResumeExists && (
-                          <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-                        )}
-                        {a.baseResumeExists
-                          ? `${fmtBytes(a.baseResumeSize!)} · ${new Date(a.baseResumeMtimeMs!).toLocaleDateString()}`
-                          : "missing on disk"}
-                      </span>
-                    </>
-                  ) : (
-                    <span
-                      className="inline-flex items-center gap-1"
-                      style={{ color: "var(--color-warn)" }}
-                    >
-                      <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-                      no base DOCX set
-                    </span>
+                  <StatusBadge a={a} />
+                  {a.baseResumePath && a.baseResumeExists && (
+                    <span>{a.baseResumePath}</span>
                   )}
                 </div>
               </div>
@@ -279,6 +354,88 @@ function Messages({ msg, err }: { msg: string | null; err: string | null }) {
     >
       {err ?? msg}
     </div>
+  );
+}
+
+function StatusBadge({ a }: { a: ArchetypeSummary }) {
+  const status: BaseStatus = a.baseStatus;
+
+  if (status === "generating" || status === "reviewing") {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5"
+        style={{ color: "var(--color-accent)" }}
+      >
+        <span className="relative inline-flex w-2 h-2">
+          <span
+            className="absolute inset-0 rounded-full animate-ping"
+            style={{ background: "var(--color-accent)", opacity: 0.6 }}
+          />
+          <span
+            className="relative inline-block w-2 h-2 rounded-full"
+            style={{ background: "var(--color-accent)" }}
+          />
+        </span>
+        {status === "generating" ? "drafting" : "HM review"} · pass {a.baseReviewPass || 1}
+      </span>
+    );
+  }
+
+  if (status === "stalled") {
+    return (
+      <span
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--color-warn)" }}
+      >
+        <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+        stalled at pass {a.baseReviewPass} — Edit to accept or restart
+      </span>
+    );
+  }
+
+  if (status === "errored") {
+    return (
+      <span
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--color-err)" }}
+      >
+        <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+        generation errored — Edit for details
+      </span>
+    );
+  }
+
+  // status === 'ready' or 'none' — fall back to the file-on-disk signal.
+  if (a.baseResumePath && a.baseResumeExists) {
+    return (
+      <span
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--color-ok)" }}
+      >
+        <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+        {`${fmtBytes(a.baseResumeSize!)} · ${new Date(a.baseResumeMtimeMs!).toLocaleDateString()}`}
+      </span>
+    );
+  }
+  if (a.baseResumePath && !a.baseResumeExists) {
+    return (
+      <span
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--color-warn)" }}
+      >
+        <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+        path set but missing on disk
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      style={{ color: "var(--color-warn)" }}
+    >
+      <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+      no base DOCX set
+    </span>
   );
 }
 

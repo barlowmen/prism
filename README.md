@@ -13,11 +13,15 @@ the engine.
 
 ## What it does
 
+0. *(Setup, once.)* You scaffold *archetypes* (AI-leaning, cloud-infra-leaning,
+   etc.) from your profile's tailoring playbook, then click **Generate all
+   bases** — a base-resume agent drafts a long-form resume per archetype,
+   reviewed by a median-HM agent in a loop until it passes the bar.
 1. You **paste a job posting URL** — or paste a list of 10+ URLs at
    once in bulk mode — or run discovery against ATS boards.
-2. A **dispatcher agent** fetches the JD, picks one of your *archetypes*
-   (e.g. AI-leaning vs cloud-infra-leaning), and decides GO /
-   NEEDS-DISCUSSION / RECOMMEND-SKIP based on your profile's filter rules.
+2. A **dispatcher agent** fetches the JD, picks the right archetype
+   for the posting, and decides GO / NEEDS-DISCUSSION / RECOMMEND-SKIP
+   based on your profile's filter rules.
 3. Three **research agents** run in parallel: JD analysis, company
    research, archetype-specific tailoring playbook.
 4. A **drafting agent** writes a tailored Node script (`docx` library) and

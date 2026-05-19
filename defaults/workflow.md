@@ -93,6 +93,16 @@ apps/<Company>/<Role>/
 
 ---
 
+## Base resume generation (orthogonal to the per-job pipeline)
+
+Base resumes at `_resumes/<key>_base.docx` are produced by a separate orchestrator (`lib/agents/base-resume.ts`) triggered from **Settings → Archetypes**. Each archetype gets its own base, drafted from `about_user.md` + the archetype's playbook entry (from "Tailoring playbook by archetype") + its `tailoringRules` field. The draft is then reviewed in an HM loop (median-HM voice for the archetype's role family) up to 5 passes — if the reviewer says "ready to submit" the base is promoted; if the loop stalls the user is prompted to accept or restart.
+
+The §4 draft agent below starts from the chosen archetype's base and tailors per JD. Base generation does **not** run §6 provenance — the HM loop's honesty check ("every claim traces to `about_user.md`") is sufficient at the archetype-pure stage.
+
+This section is informational. The agents themselves don't reference it; it's documented here so the per-job workflow's references to "the base resume" have a clear origin.
+
+---
+
 ## §0. Dispatcher
 
 The dispatcher is the routing brain. One run per posting. It decides whether the posting is worth pursuing, which archetype to start from, and whether anything about the JD requires user input before research begins.
