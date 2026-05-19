@@ -18,6 +18,7 @@ import "server-only";
  */
 import { launchClaude, type AgentPhase, type AgentStreamEvent, type LaunchResult } from "../claude-launcher";
 import { ensureSystemFiles } from "../system-files";
+import { ensureOrphanSweep } from "./orphan-sweep";
 import {
   RunLogWriter,
   emptyTokenTotals,
@@ -67,6 +68,11 @@ export async function startRun(input: StartRunInput): Promise<{
   done: Promise<LaunchResult>;
 }> {
   await ensureSystemFiles();
+  // Reconcile any "running" rows left over from a previous server
+  // process that died before its agents completed — same cached-once
+  // pattern as ensureSystemFiles, so the cost is amortized across the
+  // life of this process.
+  await ensureOrphanSweep();
   const runId = newRunId();
   const startedAt = new Date().toISOString();
   const meta: RunMetadata = {

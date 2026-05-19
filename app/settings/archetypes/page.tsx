@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { listSummaries } from "@/lib/archetypes/store";
 import { previewScaffolds } from "@/lib/archetypes/scaffold";
+import { ensureOrphanSweep } from "@/lib/runs/orphan-sweep";
 import { Button, PageHeader } from "@/components/ui";
 import { ArchetypesList } from "./list";
 
 export const dynamic = "force-dynamic";
 
 export default async function ArchetypesPage() {
+  // Reconcile any archetypes stuck in `generating` / `reviewing` from a
+  // server process that died mid-loop. Otherwise the concurrency guard
+  // would block fresh Generate clicks on those rows.
+  await ensureOrphanSweep();
   const [archetypes, scaffolds] = await Promise.all([
     listSummaries(),
     previewScaffolds(),

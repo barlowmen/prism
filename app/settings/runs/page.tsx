@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { readRunsIndex } from "@/lib/runs/store";
+import { ensureOrphanSweep } from "@/lib/runs/orphan-sweep";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { RunsLivePoll } from "./poll";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunsPage() {
+  // Sweep before reading so any "running" entries left over from a
+  // previous process get reconciled before they render as live runs.
+  // Cached-once per process — first request after a restart pays the
+  // walk; everything else is free.
+  await ensureOrphanSweep();
   const runs = await readRunsIndex();
   const hasActive = runs.some((r) => r.status === "running");
   return (
