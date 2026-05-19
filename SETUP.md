@@ -123,21 +123,37 @@ when the dispatcher should pick it for a job. Most users want 1–3:
   leadership roles where AI is at most adjacent.
 - Optionally a **PM-shaped** base if you're targeting product roles.
 
-Visit **Archetypes** in the nav. For each:
-1. Click **New archetype**, give it a label and key (e.g. `ai`, `cloud`).
-2. Open it. Upload your starter DOCX (the agent will tailor from this
-   per job; the file lands in `<workspace>/_resumes/`).
-3. Fill in **Matching hints** — markdown describing JD signals that
-   should route a posting here. The dispatcher reads this verbatim
-   when picking which archetype fits a posting.
-4. Optionally fill **Tailoring rules** — archetype-specific deltas
-   the draft agent reads on top of `about_user.md` (e.g., "for this
-   archetype, lead with public artifacts and put the PhD in a
-   Research section above Experience").
+### Recommended: scaffold from your profile
 
-Repeat for each archetype. The dispatcher consults the matching hints
-on every paste — keep them concrete (specific company names, JD
-phrases, scope signals) so it can route reliably.
+If you completed the **Tailoring playbook by archetype** section in
+the Profile Interview (one `### X. Label` subsection per target type),
+prism can auto-create archetype JSON records from those.
+
+Visit **Settings → Archetypes**. If the page detects un-scaffolded
+archetypes in your profile, an amber callout offers a **Scaffold from
+profile** primary button. Click it: prism creates one JSON record per
+playbook subsection, with `label`, `description`, and `matchingHints`
+pre-filled from your profile prose. Your `about_user.md` is read-only —
+nothing in it gets changed. Existing archetype records are left alone
+(idempotent — safe to re-run).
+
+After scaffolding, open each archetype and:
+1. **Upload a base resume DOCX** — required to activate. The file lands
+   in `<workspace>/_resumes/`. The draft agent starts from this DOCX
+   and tailors it per job.
+2. *(Optional)* Refine the **Matching hints** — the auto-generated
+   block is a starter. Add specific company names, role keywords, JD
+   phrases that should route to this archetype.
+3. *(Optional)* Fill **Tailoring rules** — archetype-specific deltas
+   the draft agent reads on top of `about_user.md`. Usually unnecessary
+   if your profile's playbook already covers tailoring per archetype.
+
+### Manual route
+
+If you'd rather create archetypes by hand (or your profile doesn't yet
+have a tailoring playbook section), click **New archetype** instead.
+Give it a label and key (e.g. `ai`, `cloud`), upload the base DOCX,
+fill in matching hints, save. Repeat per archetype.
 
 ---
 

@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { listSummaries } from "@/lib/archetypes/store";
+import { previewScaffolds } from "@/lib/archetypes/scaffold";
 import { Button, PageHeader } from "@/components/ui";
 import { ArchetypesList } from "./list";
 
 export const dynamic = "force-dynamic";
 
 export default async function ArchetypesPage() {
-  const archetypes = await listSummaries();
+  const [archetypes, scaffolds] = await Promise.all([
+    listSummaries(),
+    previewScaffolds(),
+  ]);
+  const unscaffolded = scaffolds.available.filter((a) => !a.exists);
+
   return (
     <>
       <PageHeader
@@ -25,7 +31,15 @@ export default async function ArchetypesPage() {
           </Link>
         }
       />
-      <ArchetypesList initial={archetypes} />
+      <ArchetypesList
+        initial={archetypes}
+        scaffoldPreview={{
+          profileFound: scaffolds.profileFound,
+          available: scaffolds.available,
+          unscaffoldedCount: unscaffolded.length,
+          notes: scaffolds.notes,
+        }}
+      />
     </>
   );
 }
