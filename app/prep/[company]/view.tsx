@@ -26,6 +26,7 @@ import {
   Tab,
   TabStrip,
 } from "@/components/ui";
+import { AgentRunPane } from "@/components/AgentRunPane";
 import {
   GROUP_LABELS,
   GROUP_ORDER,
@@ -55,6 +56,10 @@ export function PrepCompanyView({
   const [bootstrapMsg, setBootstrapMsg] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [buildMsg, setBuildMsg] = useState<string | null>(null);
+  /** runId of the active prep-builder agent. Mounts an AgentRunPane below
+   *  the action row so the user sees the agent's tool calls + token spend
+   *  live, instead of just an "agent spawned (runId 12345abc)" toast. */
+  const [buildRunId, setBuildRunId] = useState<string | null>(null);
 
   const filesByGroup = useMemo(() => {
     const m = new Map<PrepGroup, PrepFile[]>();
@@ -121,10 +126,10 @@ export function PrepCompanyView({
         setBuildMsg(`error: ${data.error ?? r.status}`);
         return;
       }
-      setBuildMsg(
-        data.message ??
-          `spawned prep-builder agent (runId ${data.runId?.slice(0, 8) ?? "?"})`,
-      );
+      setBuildMsg(data.message ?? "prep-builder agent spawned");
+      if (typeof data.runId === "string") {
+        setBuildRunId(data.runId);
+      }
       router.refresh();
     } catch (e) {
       setBuildMsg(`error: ${String(e)}`);
@@ -161,10 +166,14 @@ export function PrepCompanyView({
               {hasApps && (
                 <Button
                   onClick={build}
-                  disabled={building}
+                  disabled={building || !!buildRunId}
                   icon={<Sparkles className="w-3 h-3" />}
                 >
-                  {building ? "Spawning…" : "Build with assistant"}
+                  {building
+                    ? "Spawning…"
+                    : buildRunId
+                      ? "Running…"
+                      : "Build with assistant"}
                 </Button>
               )}
             </div>
@@ -176,6 +185,17 @@ export function PrepCompanyView({
           {bootstrapMsg && <div className="mt-2">{bootstrapMsg}</div>}
           {buildMsg && <div className="mt-2">{buildMsg}</div>}
         </EmptyState>
+        {buildRunId && (
+          <div className="mt-4">
+            <AgentRunPane
+              runId={buildRunId}
+              onCompleted={() => {
+                setBuildRunId(null);
+                router.refresh();
+              }}
+            />
+          </div>
+        )}
       </>
     );
   }
@@ -195,14 +215,30 @@ export function PrepCompanyView({
           <Button
             variant="primary"
             onClick={build}
-            disabled={building}
+            disabled={building || !!buildRunId}
             icon={<Sparkles className="w-3 h-3" />}
-            title="Spawn an agent that drafts round-specific content from research/* + about_user.md"
+            title={
+              buildRunId
+                ? "Builder already running — watch the pane below."
+                : "Spawn an agent that drafts round-specific content from research/* + about_user.md"
+            }
           >
-            {building ? "Spawning…" : "Build with assistant"}
+            {building ? "Spawning…" : buildRunId ? "Running…" : "Build with assistant"}
           </Button>
         )}
       </div>
+
+      {buildRunId && (
+        <div className="mb-3">
+          <AgentRunPane
+            runId={buildRunId}
+            onCompleted={() => {
+              setBuildRunId(null);
+              router.refresh();
+            }}
+          />
+        </div>
+      )}
 
       {(bootstrapMsg || buildMsg) && (
         <div

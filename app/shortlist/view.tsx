@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { Button, CodeArea, EmptyState } from "@/components/ui";
+import { AgentRunPane } from "@/components/AgentRunPane";
 import type { Job } from "@/lib/jobs/types";
 
 export function ShortlistView({ initial }: { initial: Job[] }) {
@@ -19,6 +20,15 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
   const [jobs, setJobs] = useState<Job[]>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [skipping, setSkipping] = useState<{ jobId: string; reason: string } | null>(null);
+  /**
+   * Pending dispatcher runs spawned from Approve clicks. Each entry
+   * gets its own AgentRunPane below the list so the user can watch
+   * the dispatcher pick an archetype + classify, instead of staring
+   * at a blank shortlist wondering if the spawn worked.
+   */
+  const [activeRuns, setActiveRuns] = useState<
+    Array<{ runId: string; company: string; role: string }>
+  >([]);
 
   const setStatus = async (jobId: string, status: string, note: string) => {
     setBusy(jobId + ":" + status);
@@ -44,7 +54,14 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
         body: JSON.stringify({}),
       });
       if (r.ok) {
+        const data = await r.json().catch(() => ({}));
         setJobs((prev) => prev.filter((x) => x.id !== j.id));
+        if (typeof data?.runId === "string") {
+          setActiveRuns((prev) => [
+            ...prev,
+            { runId: data.runId, company: j.company, role: j.role },
+          ]);
+        }
         router.refresh();
       }
     } finally {
@@ -52,16 +69,43 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
     }
   };
 
+  const runPanes = activeRuns.length > 0 && (
+    <div className="space-y-2 mb-4">
+      {activeRuns.map((run) => (
+        <div key={run.runId}>
+          <div
+            className="text-[11px] font-mono mb-1"
+            style={{ color: "var(--color-fg-muted)" }}
+          >
+            dispatcher · {run.company} / {run.role}
+          </div>
+          <AgentRunPane
+            runId={run.runId}
+            onCompleted={() => {
+              setActiveRuns((prev) => prev.filter((x) => x.runId !== run.runId));
+              router.refresh();
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
   if (jobs.length === 0) {
     return (
-      <EmptyState title="Shortlist is empty.">
-        Run discovery from the Dashboard or paste a job manually.
-      </EmptyState>
+      <>
+        {runPanes}
+        <EmptyState title="Shortlist is empty.">
+          Run discovery from the Dashboard or paste a job manually.
+        </EmptyState>
+      </>
     );
   }
 
   return (
-    <ul className="space-y-2">
+    <>
+      {runPanes}
+      <ul className="space-y-2">
       {jobs.map((j) => (
         <li
           key={j.id}
@@ -128,7 +172,8 @@ export function ShortlistView({ initial }: { initial: Job[] }) {
           }}
         />
       )}
-    </ul>
+      </ul>
+    </>
   );
 }
 
