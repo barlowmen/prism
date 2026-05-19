@@ -7,6 +7,7 @@ import { ExternalLink } from "lucide-react";
 import type { Job, JobStatus } from "@/lib/jobs/types";
 import type { ColumnGroup, GroupedJobs } from "@/lib/jobs/grouping";
 import { PasteJobModal } from "@/components/PasteJobModal";
+import { AgentRunPane } from "@/components/AgentRunPane";
 import { usePageContext } from "@/components/ChatContext";
 import { Button, Callout, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 
@@ -27,6 +28,13 @@ export function Dashboard(props: Props) {
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
+  /**
+   * Active discovery runId. Set by DiscoveryButton on POST success;
+   * AgentRunPane mounts against it for live SSE. Cleared on completion
+   * (AgentRunPane's onCompleted callback) so the pane unmounts and the
+   * dashboard re-fetches jobs.
+   */
+  const [discoveryRunId, setDiscoveryRunId] = useState<string | null>(null);
 
   // Chat-context: summarize the kanban so the assistant knows what's on screen.
   const byStatus: Record<string, number> = {};
@@ -71,13 +79,25 @@ export function Dashboard(props: Props) {
         }
         actions={
           <>
-            <DiscoveryButton router={router} />
+            <DiscoveryButton onSpawned={setDiscoveryRunId} disabled={!!discoveryRunId} />
             <Button variant="primary" onClick={() => setPasteOpen(true)}>
               Paste a job
             </Button>
           </>
         }
       />
+
+      {discoveryRunId && (
+        <div className="mb-6">
+          <AgentRunPane
+            runId={discoveryRunId}
+            onCompleted={() => {
+              setDiscoveryRunId(null);
+              router.refresh();
+            }}
+          />
+        </div>
+      )}
 
       {importPreview.notImported > 0 && (
         <div className="mb-6">
@@ -157,7 +177,17 @@ export function Dashboard(props: Props) {
   );
 }
 
-function DiscoveryButton({ router }: { router: ReturnType<typeof useRouter> }) {
+function DiscoveryButton({
+  onSpawned,
+  disabled,
+}: {
+  /** Called with the runId when /api/discovery/run returns successfully so the
+   *  parent can mount AgentRunPane for live SSE updates. */
+  onSpawned: (runId: string) => void;
+  /** True while a previous discovery run is still in flight — prevents the
+   *  user from kicking off a second one before the first completes. */
+  disabled: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const run = async () => {
@@ -170,7 +200,9 @@ function DiscoveryButton({ router }: { router: ReturnType<typeof useRouter> }) {
         setErr(data.error ?? `HTTP ${r.status}`);
         return;
       }
-      router.refresh();
+      if (typeof data.runId === "string") {
+        onSpawned(data.runId);
+      }
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -180,10 +212,15 @@ function DiscoveryButton({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <Button
       onClick={run}
-      disabled={busy}
-      title={err ?? "Spawn discovery agent. Writes to postings/ + .state/discovery/. Long-running (~5–15 min)."}
+      disabled={busy || disabled}
+      title={
+        err ??
+        (disabled
+          ? "Discovery already running — watch the pane below."
+          : "Spawn discovery agent. Writes to postings/ + .state/discovery/. Long-running (~5–15 min).")
+      }
     >
-      {busy ? "Spawning…" : "Run discovery"}
+      {busy ? "Spawning…" : disabled ? "Running…" : "Run discovery"}
     </Button>
   );
 }
