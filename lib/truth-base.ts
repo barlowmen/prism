@@ -1,11 +1,16 @@
 import "server-only";
 /**
- * Read/write for the three allowlisted truth-base files
- * (about_user / style_guide / workflow). Slugs are gated against
- * TRUTH_BASE_FILES in paths.ts so the API can't be tricked into
- * writing arbitrary paths under _meta/. Writes are atomic
- * temp-and-rename, and the previous version is backed up under
- * _meta/.prism-backups/ before each replace.
+ * Read/write for the user-editable Truth Base files (about_user and
+ * resume_style_guide_2026). Slugs are gated against TRUTH_BASE_FILES
+ * in paths.ts so the API can't be tricked into writing arbitrary paths
+ * under _meta/. Writes are atomic temp-and-rename so half-written
+ * files never appear on disk.
+ *
+ * Workflow.md and build_resume_template.js are NOT in this allowlist —
+ * they're prism-managed system files seeded from <repo>/defaults/ on
+ * first agent run (see lib/system-files.ts). They live alongside the
+ * user-editable files in _meta/ but the editor surface doesn't expose
+ * them.
  */
 import fs from "node:fs/promises";
 import path from "node:path";

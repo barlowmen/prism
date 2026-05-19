@@ -1,10 +1,12 @@
 /**
  * /api/truth-base/<slug>
  *
- * GET — read one truth-base file (about_user, style_guide, workflow).
+ * GET — read one user-editable truth-base file (about_user or style_guide).
  * PUT — overwrite. Atomic temp-and-rename so half-written files never
  *       appear on disk. The slug must be in the allowlist at
  *       lib/paths.ts:TRUTH_BASE_FILES; anything else is rejected.
+ *       System-managed files like workflow.md are intentionally not in
+ *       the allowlist — see lib/system-files.ts.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import {

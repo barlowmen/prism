@@ -1,6 +1,8 @@
 # Resume Tailoring Workflow
 
-End-to-end pipeline for tailoring one resume per posting. **prism** orchestrates this — every step below is triggered from the web UI at `http://127.0.0.1:3737/` or by an action you take in it (Paste a job, Run dispatcher, etc.). This file is read by every agent on cold-start; the numbered sections (§0, §2, §4, §5, §6) are referenced verbatim by the prompts.
+> **Prism-managed system file.** This is the canonical pipeline spec the agents read on every run. It's seeded from `prism/defaults/workflow.md` into `<workspace>/_meta/workflow.md` on first use and is **not** exposed in the Truth Base editor. Edit it locally if you need to, but be aware that the numbered sections (§0, §2, §4, §5, §6) are referenced verbatim by the agent prompts — renumbering or removing them will break the agents.
+
+End-to-end pipeline for tailoring one resume per posting. **prism** orchestrates this — every step below is triggered from the web UI at `http://127.0.0.1:3737/` or by an action you take in it (Paste a job, Run dispatcher, etc.). This file is read by every agent on cold-start.
 
 The pipeline:
 

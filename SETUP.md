@@ -126,14 +126,18 @@ when the dispatcher should pick it for a job. Most users want 1–3:
 Visit **Archetypes** in the nav. For each:
 1. Click **New archetype**, give it a label and key (e.g. `ai`, `cloud`).
 2. Open it. Upload your starter DOCX (the agent will tailor from this
-   per job).
+   per job; the file lands in `<workspace>/_resumes/`).
 3. Fill in **Matching hints** — markdown describing JD signals that
-   should route a posting here. The dispatcher reads this verbatim.
+   should route a posting here. The dispatcher reads this verbatim
+   when picking which archetype fits a posting.
+4. Optionally fill **Tailoring rules** — archetype-specific deltas
+   the draft agent reads on top of `about_user.md` (e.g., "for this
+   archetype, lead with public artifacts and put the PhD in a
+   Research section above Experience").
 
-The DOCX path is configurable per archetype. If you already have base
-resumes named `*_AI.docx` / `*_Cloud.docx` under your workspace's
-`_resumes/`, the **Seed from existing `_resumes/`** action on the
-Archetypes page creates `ai` and `cloud` archetypes pointing at them.
+Repeat for each archetype. The dispatcher consults the matching hints
+on every paste — keep them concrete (specific company names, JD
+phrases, scope signals) so it can route reliably.
 
 ---
 
