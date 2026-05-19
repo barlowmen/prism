@@ -225,3 +225,32 @@ you can ignore it and rely on **Paste a job**.
 - **Profile Interview chat doesn't stream.** Check the **Runs** page for
   the underlying agent run. If the run failed, the error is in
   `<your_workspace>/.state/runs/<runId>.log`.
+- **Base resume generation says "completed but DOCX not on disk".** The
+  agent was probably denied a tool it needed — usually `Bash(node:*)`.
+  Check `<workspace>/.claude/settings.json`; prism seeds it on first run
+  with `Bash(node:*)`, `WebSearch`, and `WebFetch` allowed by default.
+  If it's missing or was hand-edited, restart the server to re-seed
+  defaults, then click **Restart** on the affected archetype. The
+  archetype's error callout now names the denied tools when this
+  happens, so you don't have to dig through the run log to find them.
+- **Discovery runs but the dashboard shows nothing.** Expected when the
+  agent is still working — discovery writes to `postings/` and
+  `.state/discovery/`, not directly to the jobs list, and only surfaces
+  results via the Shortlist after it completes. The dashboard now
+  streams the agent's tool calls + token spend inline via AgentRunPane
+  while it runs, so you can watch progress in real time without leaving
+  the page.
+- **An agent ran but produced empty output and burned tokens.** Look in
+  `.state/runs/<runId>.log` for the run's `structuredResult` — if
+  `permission_denials` is non-empty, the workspace `.claude/settings.json`
+  is missing an allow rule. Either restart the server to re-seed defaults
+  or add the rule by hand (most commonly: `Bash(node:*)`, `WebSearch`,
+  `WebFetch`). The orchestrator now detects this case for base-resume
+  generation and surfaces the denied tools directly in the archetype's
+  error callout — other phases still require log-diving for the moment.
+- **Run shows status `running` after a server restart but the agent is
+  clearly dead.** prism sweeps orphaned "running" entries on the next
+  agent run *or* the next visit to **Settings → Runs** / **Settings →
+  Archetypes**, marking them `failed` with a note. Any archetype whose
+  base-resume loop got orphaned mid-flight is reset to `errored` with
+  the same explanation — click **Restart** to start fresh.
