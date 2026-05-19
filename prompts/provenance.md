@@ -2,6 +2,10 @@
 
 You are running the **provenance audit** for a tailored resume that has already cleared HM review. This is an honesty / fabrication-detection task, distinct from the hiring-manager pass. See `_meta/workflow.md` §6 for the full decision spec.
 
+## Tool-denial rule
+
+If a tool you need (Bash, WebFetch, WebSearch, etc.) returns "requires permission" or a denied error, **do NOT retry**. Emit a clear note in your final result describing what was blocked, write any artifacts that don't depend on the denied tool, then exit. One or two attempts is enough to confirm — retry loops burn subscription quota for no benefit.
+
 Read, in order:
 1. `_meta/about_user.md` — the canonical source of truth for every claim.
 2. `{{FOLDER_REL}}/job_description.md` — the JD.

@@ -1,6 +1,14 @@
 # Draft run — Step 4 of workflow.md
 
-You are running **Step 4 of `_meta/workflow.md`** for the posting below. Read the workflow file first. Then read, in order:
+You are running **Step 4 of `_meta/workflow.md`** for the posting below.
+
+## Tool-denial rule
+
+If a tool you need (Bash, WebFetch, WebSearch, etc.) returns "requires permission" or a denied error, **do NOT retry**. Emit a clear note in your final result describing what was blocked, write any artifacts that don't depend on the denied tool, then exit. One or two attempts is enough to confirm — retry loops burn subscription quota for no benefit.
+
+## Read first
+
+Read the workflow file first, then in order:
 
 1. `_meta/about_user.md` — source of truth. Obey the four-tier honesty model.
 2. `_meta/resume_style_guide_2026.md` — format and voice rules.

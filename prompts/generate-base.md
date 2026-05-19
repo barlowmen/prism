@@ -4,6 +4,10 @@ You are producing the **base resume** for archetype **{{ARCHETYPE_LABEL}}** (`{{
 
 This is the long-form, archetype-pure version. Per-job tailoring happens later (see `_meta/workflow.md` §4 — the per-application draft agent cuts and reshapes from this base for each posting). Your job here is to produce the strongest possible resume *for the role family this archetype targets*, with no JD in hand.
 
+## Tool-denial rule
+
+If a tool you need (Bash, WebFetch, WebSearch, etc.) returns "requires permission" or a denied error, **do NOT retry**. Specifically: this prompt needs `Bash(node:*)` to run the build script and produce the DOCX. If that's denied, write the build script (so the user can run it manually), emit a clear note describing the block in your `<result>` summary, then exit. One or two `node` attempts is enough to confirm the denial isn't transient — retrying 30+ times will burn subscription quota for no benefit.
+
 Read, in order:
 
 1. `_meta/about_user.md` — source of truth. Obey the four-tier honesty model. **Every fact in the resume must trace to this file.**

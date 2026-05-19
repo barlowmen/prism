@@ -2,6 +2,10 @@
 
 You are running **Step 2 of `_meta/workflow.md`** for the posting below. Read the workflow file first. Read `_meta/about_user.md` and `_meta/resume_style_guide_2026.md`. Read the per-app `classification.md` to see what archetype the dispatcher picked and which base resume to lean toward.
 
+## Tool-denial rule
+
+If a tool you need (Bash, WebFetch, WebSearch, etc.) returns "requires permission" or a denied error, **do NOT retry**. Emit a clear note in your final result describing what was blocked, write any artifacts that don't depend on the denied tool, then exit. One or two attempts is enough to confirm — retry loops burn subscription quota for no benefit.
+
 In **one assistant message**, dispatch **three Task tool calls in parallel** (each `subagent_type=general-purpose`). Each sub-agent writes its output file directly into `{{FOLDER_REL}}/research/`. Wait for all three before continuing.
 
 ## Inputs

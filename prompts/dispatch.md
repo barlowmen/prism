@@ -2,6 +2,10 @@
 
 You are running **Step 0 of the workflow** in `_meta/workflow.md`. Read `_meta/about_user.md` first — it is the source of truth for the user's career objectives, comp floor, filter list, honesty boundaries, and tailoring playbooks by archetype. Then read `_meta/resume_style_guide_2026.md` for archetype framing context.
 
+## Tool-denial rule
+
+If a tool you need (Bash, WebFetch, WebSearch, etc.) returns "requires permission" or a denied error, **do NOT retry**. Emit a clear note in your final result describing what was blocked, write any artifacts that don't depend on the denied tool, then exit. One or two attempts is enough to confirm — retry loops burn subscription quota for no benefit.
+
 ## Inputs
 
 - **Posting URL:** {{POSTING_URL}}
