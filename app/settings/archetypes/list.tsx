@@ -67,12 +67,33 @@ export function ArchetypesList({
         setErr(data?.error ?? `HTTP ${r.status}`);
         return;
       }
+      // The API already returns `alreadyRunning` separately from
+      // `queued` / `alreadyHasBase` so a stray double-click on
+      // Generate-all doesn't silently re-spawn loops on archetypes that
+      // are mid-flight. Surface that list in the success message so the
+      // user sees what got skipped and why.
+      const skipped: string[] = [];
+      if (Array.isArray(data.alreadyRunning) && data.alreadyRunning.length > 0) {
+        skipped.push(
+          `${data.alreadyRunning.length} already running: ${data.alreadyRunning.join(", ")}`,
+        );
+      }
+      if (Array.isArray(data.alreadyHasBase) && data.alreadyHasBase.length > 0) {
+        skipped.push(
+          `${data.alreadyHasBase.length} already have a base: ${data.alreadyHasBase.join(", ")}`,
+        );
+      }
+      const skippedSuffix = skipped.length > 0 ? ` Skipped — ${skipped.join("; ")}.` : "";
+
       if (data.queued.length === 0) {
-        setMsg("Nothing to queue — every archetype already has a base.");
+        setMsg(
+          (skippedSuffix ? `Nothing to queue.${skippedSuffix}` : "Nothing to queue — every archetype already has a base."),
+        );
       } else {
         setMsg(
           `Queued ${data.queued.length} archetype${data.queued.length === 1 ? "" : "s"}: ${data.queued.join(", ")}. ` +
-            `Each will run generate → HM review until ready (or stalled at pass 5).`,
+            `Each will run generate → HM review until ready (or stalled at pass 5).` +
+            skippedSuffix,
         );
       }
       router.refresh();

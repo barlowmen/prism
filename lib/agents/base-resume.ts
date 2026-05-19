@@ -41,7 +41,15 @@ import { startRun, getRunSnapshot } from "../runs/broker";
 import type { RunMetadata } from "../runs/types";
 
 const GENERATION_TIMEOUT_MS = 12 * 60 * 1000;
-const REVIEW_TIMEOUT_MS = 8 * 60 * 1000;
+// Matches GENERATION_TIMEOUT_MS. Reviews legitimately run 5-8 min on
+// dense archetypes (median HM reads the DOCX bytes + about_user +
+// playbook subsection + style guide before scoring); the previous 8 min
+// cap was tight enough that pass 3 of IC architect ran 7m53s and pass 4
+// timed out at exactly 8m00s, then the orchestrator's verdict-parse
+// fallback misread the prior pass's bold "**Verdict:** ready to submit"
+// and clobbered the legitimate `ready` status as `errored`. Giving
+// reviews the same headroom as drafts removes the false-timeout risk.
+const REVIEW_TIMEOUT_MS = 12 * 60 * 1000;
 
 /** Maximum review passes before the loop is parked in `stalled` and the
  *  user has to decide Accept-anyway vs. Restart. Five was the agreed
