@@ -73,7 +73,13 @@ export default async function RunsPage() {
                 return (
                   <tr key={r.runId} className="border-t" style={{ borderColor: "var(--color-border)" }}>
                     <td className="py-2 px-3 text-xs font-mono">
-                      {new Date(r.startedAt).toLocaleString()}
+                      <Link
+                        href={`/settings/runs/${encodeURIComponent(r.runId)}`}
+                        className="hover:underline"
+                        title="Open run detail (replays the event stream)"
+                      >
+                        {new Date(r.startedAt).toLocaleString()}
+                      </Link>
                     </td>
                     <td className="py-2 px-3 text-xs font-mono">{r.phase}</td>
                     <td className="py-2 px-3 text-xs">
