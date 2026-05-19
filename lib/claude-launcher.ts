@@ -28,7 +28,9 @@ export type AgentPhase =
   | "provenance"
   | "assistant"
   | "prep_builder"
-  | "probe";
+  | "probe"
+  | "base_generation"
+  | "base_review";
 
 export type AgentStreamEvent =
   | { type: "stdout"; text: string }

@@ -29,11 +29,16 @@ export type ScaffoldResult = {
   notes: string[];
 };
 
-type ParsedArchetype = {
+export type ParsedArchetype = {
   key: string;
   label: string;
   description: string;
   matchingHints: string;
+  /** Raw markdown body of the H3 subsection (everything under
+   *  `### X. Label` up to the next H3 or the end of the playbook
+   *  section). The orchestrator passes this verbatim to the
+   *  base-generation + base-review prompts. */
+  body: string;
 };
 
 const PLAYBOOK_HEADING_RE = /^##\s+Tailoring playbook by archetype\s*$/m;
@@ -81,6 +86,7 @@ export function parseTailoringPlaybook(source: string): ParsedArchetype[] {
       label: parsed.label,
       description: parsed.description,
       matchingHints: buildMatchingHints(parsed.label, parsed.parenthetical, body),
+      body,
     });
   }
   return out;
@@ -149,6 +155,28 @@ function buildMatchingHints(
     "**The dispatcher also reads** `about_user.md` \"Tailoring playbook by archetype\" alongside this file — the full per-archetype tailoring guidance lives there, so this block can stay focused on JD-routing signals only.",
   );
   return lines.join("\n");
+}
+
+/**
+ * Read `about_user.md` and return the H3 subsection body for one
+ * archetype key, or `null` if no subsection slugifies to that key.
+ * Used by the base-resume orchestrator to pass per-archetype voice
+ * + framing guidance into the generator + reviewer prompts.
+ */
+export async function readArchetypePlaybookBody(
+  archetypeKey: string,
+): Promise<string | null> {
+  const profilePath = absWorkspace(ABOUT_USER_REL_PATH);
+  let source: string;
+  try {
+    source = await fs.readFile(profilePath, "utf8");
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return null;
+    throw err;
+  }
+  const parsed = parseTailoringPlaybook(source);
+  const match = parsed.find((p) => p.key === archetypeKey);
+  return match?.body ?? null;
 }
 
 /**

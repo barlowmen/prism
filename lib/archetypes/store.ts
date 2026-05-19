@@ -17,7 +17,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { META_DIR, absInterviews } from "../paths";
-import type { Archetype, ArchetypeSummary } from "./types";
+import type { Archetype, ArchetypeSummary, BaseStatus } from "./types";
 
 const ARCHETYPES_DIR = path.join(META_DIR, "archetypes");
 
@@ -76,10 +76,26 @@ async function atomicWriteJSON(absPath: string, value: unknown): Promise<void> {
   }
 }
 
+/**
+ * Default missing base-state fields on archetypes written before the
+ * base-resume-generation feature shipped. Keeps existing JSON readable
+ * without a migration step.
+ */
+function hydrateBaseState(raw: any): Archetype {
+  return {
+    ...raw,
+    baseStatus: (raw.baseStatus as BaseStatus | undefined) ?? "none",
+    baseReviewPass: typeof raw.baseReviewPass === "number" ? raw.baseReviewPass : 0,
+    baseLatestRunId: raw.baseLatestRunId ?? null,
+    baseLastFeedback: raw.baseLastFeedback ?? "",
+    baseGeneratedAt: raw.baseGeneratedAt ?? null,
+  } as Archetype;
+}
+
 export async function readArchetype(key: string): Promise<Archetype | null> {
   try {
     const raw = await fs.readFile(archetypePath(key), "utf8");
-    return JSON.parse(raw) as Archetype;
+    return hydrateBaseState(JSON.parse(raw));
   } catch (err: any) {
     if (err?.code === "ENOENT") return null;
     throw err;
@@ -94,7 +110,7 @@ export async function listArchetypes(): Promise<Archetype[]> {
       if (!name.endsWith(".json") || name.startsWith(".")) continue;
       try {
         const raw = await fs.readFile(path.join(ARCHETYPES_DIR, name), "utf8");
-        out.push(JSON.parse(raw) as Archetype);
+        out.push(hydrateBaseState(JSON.parse(raw)));
       } catch {}
     }
     out.sort((a, b) => a.key.localeCompare(b.key));
@@ -130,6 +146,9 @@ export async function listSummaries(): Promise<ArchetypeSummary[]> {
       baseResumeMtimeMs: mtimeMs,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
+      baseStatus: a.baseStatus,
+      baseReviewPass: a.baseReviewPass,
+      baseLatestRunId: a.baseLatestRunId,
     });
   }
   return out;
@@ -158,6 +177,11 @@ export async function createArchetype(input: CreateInput): Promise<Archetype> {
       tailoringRules: input.tailoringRules ?? "",
       createdAt: now,
       updatedAt: now,
+      baseStatus: "none",
+      baseReviewPass: 0,
+      baseLatestRunId: null,
+      baseLastFeedback: "",
+      baseGeneratedAt: null,
     };
     await atomicWriteJSON(archetypePath(input.key), a);
     return a;
@@ -177,6 +201,40 @@ export async function updateArchetype(
       ...current,
       ...patch,
       key, // immutable
+      createdAt: current.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    await atomicWriteJSON(archetypePath(key), next);
+    return next;
+  });
+}
+
+export type BaseStatePatch = Partial<{
+  baseStatus: BaseStatus;
+  baseReviewPass: number;
+  baseLatestRunId: string | null;
+  baseLastFeedback: string;
+  baseGeneratedAt: string | null;
+  baseResumePath: string;
+}>;
+
+/**
+ * Patch only the base-resume state fields on an archetype. Same atomic
+ * write + per-key lock as {@link updateArchetype}, but the named-API
+ * version that the base-resume orchestrator calls — keeps intent clear
+ * at call sites and prevents accidentally clobbering label/description.
+ */
+export async function updateArchetypeBaseState(
+  key: string,
+  patch: BaseStatePatch,
+): Promise<Archetype> {
+  return withLock(key, async () => {
+    const current = await readArchetype(key);
+    if (!current) throw new Error(`archetype_not_found:${key}`);
+    const next: Archetype = {
+      ...current,
+      ...patch,
+      key,
       createdAt: current.createdAt,
       updatedAt: new Date().toISOString(),
     };

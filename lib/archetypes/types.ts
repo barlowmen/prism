@@ -11,6 +11,14 @@
  * the same base. Base archetypes are what the dispatcher picks; career
  * archetypes are what the drafting agent reads to fine-tune.
  */
+export type BaseStatus =
+  | "none"
+  | "generating"
+  | "reviewing"
+  | "ready"
+  | "stalled"
+  | "errored";
+
 export type Archetype = {
   /** Filesystem-safe slug, lowercase, used as the file basename. */
   key: string;
@@ -29,6 +37,16 @@ export type Archetype = {
   tailoringRules: string;
   createdAt: string;
   updatedAt: string;
+  /** State of the base-resume generation loop. Defaults to 'none'. */
+  baseStatus: BaseStatus;
+  /** Current pass count in the generate↔review loop. 0 when idle. */
+  baseReviewPass: number;
+  /** Run ID of the most recent base-generation or base-review run. */
+  baseLatestRunId: string | null;
+  /** Last HM feedback verbatim — used by 'Accept anyway' UX + debugging. */
+  baseLastFeedback: string;
+  /** ISO timestamp the base DOCX was last produced by the generator. */
+  baseGeneratedAt: string | null;
 };
 
 export type ArchetypeSummary = {
@@ -41,4 +59,7 @@ export type ArchetypeSummary = {
   baseResumeMtimeMs: number | null;
   createdAt: string;
   updatedAt: string;
+  baseStatus: BaseStatus;
+  baseReviewPass: number;
+  baseLatestRunId: string | null;
 };
