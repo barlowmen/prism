@@ -99,7 +99,7 @@ export async function startResearch(input: StartResearchInput): Promise<{
     statusNote: "research agent spawned",
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: input.jobId,
     phase: "research",
     prompt,
@@ -194,7 +194,7 @@ export async function startDraft(input: StartDraftInput): Promise<{
     statusNote: input.feedback ? "draft re-run with HM feedback" : "draft agent spawned",
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: input.jobId,
     phase: "draft",
     prompt,
@@ -265,7 +265,7 @@ export async function startHmReview(input: StartHmReviewInput): Promise<{
     statusNote: "HM review agent spawned",
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: input.jobId,
     phase: "hm_review",
     prompt,

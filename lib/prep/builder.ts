@@ -43,7 +43,7 @@ export async function startPrepBuilder(company: string): Promise<{
     PREP_FOLDER_REL: prepFolderRel,
   });
 
-  const { runId, meta } = startRun({
+  const { runId, meta } = await startRun({
     jobId: null,
     phase: "prep_builder",
     prompt,

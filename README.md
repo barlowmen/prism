@@ -84,14 +84,16 @@ prism/                     # this repo — the orchestrator
   components/              # React components
   lib/                     # server-side libs (launcher, jobs, profile, archetypes, …)
   prompts/                 # Claude Code prompt templates per phase
+  defaults/                # shipped defaults seeded into workspace on first run
   server.sh                # start|stop|restart|status|logs
 
 <your workspace>/          # data, configured via PRISM_WORKSPACE
   _meta/
-    about_user.md          # your profile — the source of truth
-    archetypes/<key>.json  # one config per base-resume archetype
-    resume_style_guide_2026.md
-    workflow.md
+    about_user.md              # your profile — the source of truth (you own)
+    archetypes/<key>.json      # one config per base-resume archetype (you own)
+    resume_style_guide_2026.md # style/ATS/voice rules (seeded; you can edit)
+    workflow.md                # pipeline spec / agent contract (prism-managed)
+    build_resume_template.js   # DOCX builder template (prism-managed)
   _resumes/                # base resume DOCXes (one per archetype)
   apps/<Company>/<Role>/   # per-application folder: JD, research, draft, feedback
   postings/                # discovery output (job_postings_YYYY-MM-DD.md)

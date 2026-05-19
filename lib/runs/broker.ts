@@ -17,6 +17,7 @@ import "server-only";
  * replay path both read the same .state/runs/<runId>.log files.
  */
 import { launchClaude, type AgentPhase, type AgentStreamEvent, type LaunchResult } from "../claude-launcher";
+import { ensureSystemFiles } from "../system-files";
 import {
   RunLogWriter,
   emptyTokenTotals,
@@ -53,12 +54,19 @@ export type StartRunInput = {
 };
 
 /** Start a run and return its id. Events stream via subscribe(); state
- *  persists to disk. */
-export function startRun(input: StartRunInput): {
+ *  persists to disk.
+ *
+ *  Awaits ensureSystemFiles() before spawning so the agent's first reads
+ *  of `_meta/workflow.md` / `_meta/resume_style_guide_2026.md` /
+ *  `_meta/build_resume_template.js` see the bundled defaults on a
+ *  fresh workspace. The system-files cache means subsequent calls in
+ *  the same process are effectively free. */
+export async function startRun(input: StartRunInput): Promise<{
   runId: string;
   meta: RunMetadata;
   done: Promise<LaunchResult>;
-} {
+}> {
+  await ensureSystemFiles();
   const runId = newRunId();
   const startedAt = new Date().toISOString();
   const meta: RunMetadata = {

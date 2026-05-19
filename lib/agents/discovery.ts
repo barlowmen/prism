@@ -58,7 +58,7 @@ export async function startDiscovery(): Promise<{
     RUN_ID: runIdMarker,
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: null,
     phase: "discovery",
     prompt,

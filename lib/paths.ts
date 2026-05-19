@@ -37,6 +37,12 @@ export const STATE_DIR = path.join(WORKSPACE_DIR, ".state");
 /**
  * Allowlist of editable Truth Base files. Keyed by short slug used in URLs.
  * Editing any file outside this list is rejected by the API.
+ *
+ * `_meta/workflow.md` and `_meta/build_resume_template.js` are intentionally
+ * NOT here — they're prism-managed system files seeded from `<repo>/defaults/`
+ * on first agent run (see lib/system-files.ts). User-editable surface is
+ * limited to about_user (their profile, owned by them) and the style guide
+ * (universal-in-2026 voice/format rules they can tune to taste).
  */
 export const TRUTH_BASE_FILES = {
   about_user: {
@@ -47,12 +53,7 @@ export const TRUTH_BASE_FILES = {
   style_guide: {
     relPath: "_meta/resume_style_guide_2026.md",
     title: "Resume Style Guide 2026",
-    description: "Format, ATS rules, font choices, length-per-archetype.",
-  },
-  workflow: {
-    relPath: "_meta/workflow.md",
-    title: "Workflow",
-    description: "End-to-end pipeline. Read by every agent on cold-start.",
+    description: "Format, ATS rules, font choices. Seeded from defaults; edit to taste.",
   },
 } as const;
 

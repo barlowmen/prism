@@ -57,7 +57,7 @@ export async function startProvenance(jobId: string): Promise<{
     statusNote: "provenance audit spawned",
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId,
     phase: "provenance",
     prompt,

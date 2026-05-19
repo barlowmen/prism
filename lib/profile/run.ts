@@ -144,7 +144,7 @@ export async function sendSectionMessage(
   // previous section's commit landed between turns.
   const systemPrompt = await composeSystemPrompt(input.key);
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: null,
     phase: "assistant",
     prompt: input.message,

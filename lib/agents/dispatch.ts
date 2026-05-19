@@ -109,7 +109,7 @@ export async function startDispatcher(input: DispatchInput): Promise<{
       : "dispatcher spawned",
   });
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: input.jobId,
     phase: "dispatch",
     prompt,

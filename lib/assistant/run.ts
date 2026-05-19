@@ -117,7 +117,7 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageR
 
   const systemPrompt = await getSystemPrompt();
 
-  const { runId, meta, done } = startRun({
+  const { runId, meta, done } = await startRun({
     jobId: null,
     phase: "assistant",
     prompt,
