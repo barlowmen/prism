@@ -97,6 +97,25 @@ export async function startRun(input: StartRunInput): Promise<{
   writer.writeMetaStart(meta).catch(() => {});
   upsertRunIndex(meta).catch(() => {});
 
+  /**
+   * Debounce live updates of the runs index. The in-memory meta object
+   * keeps accumulating tokenTotals on every `usage` event; without this,
+   * the index file stayed at zero until meta_end, so the Runs page
+   * showed `tokens=0 · duration=—` for the entire 5–20 min agent
+   * lifetime. We refresh the index every ~3 s while a run is in flight
+   * so the Runs page (with its 5 s router.refresh poll) actually shows
+   * live token consumption and a "running for Xm" duration computed
+   * client-side from startedAt.
+   */
+  const INDEX_REFRESH_MS = 3000;
+  let lastIndexRefresh = Date.now();
+  const maybeRefreshIndex = () => {
+    const now = Date.now();
+    if (now - lastIndexRefresh < INDEX_REFRESH_MS) return;
+    lastIndexRefresh = now;
+    upsertRunIndex(meta).catch(() => {});
+  };
+
   const onStreamEvent = (e: AgentStreamEvent) => {
     // Update aggregate tokens in meta as usage events arrive.
     if (e.type === "usage") {
@@ -104,6 +123,7 @@ export async function startRun(input: StartRunInput): Promise<{
       meta.tokenTotals.output += e.outputTokens;
       meta.tokenTotals.cacheRead += e.cacheReadTokens ?? 0;
       meta.tokenTotals.cacheCreation += e.cacheCreationTokens ?? 0;
+      maybeRefreshIndex();
     }
     writer.appendEvent(e).then((recorded) => {
       state.events.push(recorded);

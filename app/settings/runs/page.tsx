@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { readRunsIndex } from "@/lib/runs/store";
 import { EmptyState, PageHeader } from "@/components/ui";
+import { RunsLivePoll } from "./poll";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunsPage() {
   const runs = await readRunsIndex();
+  const hasActive = runs.some((r) => r.status === "running");
   return (
     <>
+      <RunsLivePoll hasActive={hasActive} />
       <PageHeader
         title="Agent runs"
         description={
@@ -42,10 +45,23 @@ export default async function RunsPage() {
             </thead>
             <tbody>
               {runs.map((r) => {
-                const dur =
-                  r.completedAt && r.startedAt
-                    ? new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()
+                // For in-flight runs, compute "running for Xm Ys" against
+                // wall-clock at render time. The 5s poll keeps this fresh.
+                const endMs = r.completedAt
+                  ? new Date(r.completedAt).getTime()
+                  : r.status === "running"
+                    ? Date.now()
                     : null;
+                const dur =
+                  endMs && r.startedAt
+                    ? endMs - new Date(r.startedAt).getTime()
+                    : null;
+                const durLabel =
+                  dur == null
+                    ? "—"
+                    : dur < 60_000
+                      ? `${(dur / 1000).toFixed(1)}s`
+                      : `${Math.floor(dur / 60_000)}m ${Math.floor((dur % 60_000) / 1000)}s`;
                 const totalTokens =
                   r.tokenTotals.input + r.tokenTotals.output;
                 return (
@@ -82,7 +98,7 @@ export default async function RunsPage() {
                       {r.status}
                     </td>
                     <td className="py-2 px-3 text-xs font-mono text-right">
-                      {dur != null ? `${(dur / 1000).toFixed(1)}s` : "—"}
+                      {durLabel}
                     </td>
                     <td
                       className="py-2 px-3 text-xs font-mono text-right"
