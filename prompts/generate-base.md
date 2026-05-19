@@ -46,7 +46,7 @@ Address the top concerns above. Preserve the moments the prior pass called out a
 
 ## What to produce
 
-Write a tailored Node script `_resumes/_build_{{ARCHETYPE_KEY}}_base.js` modeled on `_meta/build_resume_template.js`. **Inline the helpers** from the template into your script — do not `require` `_meta/...` at runtime. Run the script to produce `_resumes/{{ARCHETYPE_KEY}}_base.docx`.
+Write a tailored Node script `_resumes/_builders/build_{{ARCHETYPE_KEY}}_base.js` modeled on `_meta/build_resume_template.js`. **Inline the helpers** from the template into your script — do not `require` `_meta/...` at runtime. Create the `_resumes/_builders/` directory if it doesn't exist. Run the script to produce `_resumes/{{ARCHETYPE_KEY}}_base.docx` (DOCX stays in `_resumes/` root — the orchestrator looks for it there).
 
 ## Tailoring rules (no JD, so the playbook is the source of voice)
 
