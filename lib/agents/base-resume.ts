@@ -175,13 +175,43 @@ async function routeAfterBaseGeneration(
   const docxRel = baseDocxRel(archetypeKey);
   const docxAbs = absWorkspace(docxRel);
   if (!(await fileExists(docxAbs))) {
+    // Before falling through to the generic "not on disk" error, see if
+    // Claude Code told us a tool was denied. The single biggest cause of
+    // "completed but no DOCX" was the cold-permission gate on
+    // `Bash(node:*)` — surface that as an actionable message instead of
+    // making the user dig through .state/runs/<runId>.log.
+    const snap = getRunSnapshot(runId);
+    const denials = snap?.meta.permissionDenials ?? [];
+    const message = denials.length
+      ? formatDenialMessage(denials, docxRel, runId)
+      : `base generation completed but ${docxRel} not on disk (runId ${runId})`;
     await updateArchetypeBaseState(archetypeKey, {
       baseStatus: "errored",
-      baseLastFeedback: `base generation completed but ${docxRel} not on disk (runId ${runId})`,
+      baseLastFeedback: message,
     });
     return;
   }
   await startBaseReview(archetypeKey);
+}
+
+function formatDenialMessage(
+  denials: Array<{ toolName: string; command?: string }>,
+  docxRel: string,
+  runId: string,
+): string {
+  const tools = Array.from(new Set(denials.map((d) => d.toolName)));
+  const example = denials.find((d) => d.command)?.command;
+  const exampleTail = example ? ` (e.g. \`${example.slice(0, 100)}\`)` : "";
+  return (
+    `Base generation couldn't produce ${docxRel} because the agent was ` +
+    `denied ${denials.length} tool call${denials.length === 1 ? "" : "s"} ` +
+    `(${tools.join(", ")})${exampleTail}. ` +
+    `Check \`<workspace>/.claude/settings.json\` — prism seeds it with ` +
+    `\`Bash(node:*)\`, \`WebSearch\`, and \`WebFetch\` by default. If the ` +
+    `file was hand-edited, the missing allow rule explains this failure. ` +
+    `Restart the server to re-seed defaults, then click Restart on this ` +
+    `archetype. Full run log: \`.state/runs/${runId}.log\`.`
+  );
 }
 
 /* ------------------------- review ------------------------- */

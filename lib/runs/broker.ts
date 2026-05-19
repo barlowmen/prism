@@ -81,6 +81,7 @@ export async function startRun(input: StartRunInput): Promise<{
     tokenTotals: emptyTokenTotals(),
     finalText: null,
     structuredPayload: null,
+    permissionDenials: [],
   };
 
   const writer = new RunLogWriter(runId);
@@ -159,6 +160,7 @@ export async function startRun(input: StartRunInput): Promise<{
       meta.finalText = r.finalText ?? null;
       meta.status = statusFromExit(r.exitCode, r.timedOut, /*cancelled*/ false);
       meta.structuredPayload = extractResultPayload(r.finalText ?? "");
+      meta.permissionDenials = extractPermissionDenials(r.structuredResult);
 
       await writer.drain();
       await writer.writeMetaEnd(meta);
@@ -249,6 +251,37 @@ function extractResultPayload(finalText: string): unknown {
   } catch {
     return m[1].trim();
   }
+}
+
+/**
+ * Pull the `permission_denials` array out of Claude Code's
+ * structuredResult and shape it into a smaller, typed form. Orchestrators
+ * use this to detect when a run "completed" cleanly (exitCode 0) but
+ * actually failed because the agent couldn't get permission for a tool
+ * it needed — surface that to the user as a specific, actionable error
+ * instead of a generic "completed but DOCX not on disk".
+ */
+function extractPermissionDenials(
+  structuredResult: unknown,
+): Array<{ toolName: string; command?: string }> {
+  if (!structuredResult || typeof structuredResult !== "object") return [];
+  const raw = (structuredResult as { permission_denials?: unknown }).permission_denials;
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ toolName: string; command?: string }> = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const toolName = typeof (entry as any).tool_name === "string"
+      ? (entry as any).tool_name
+      : "";
+    if (!toolName) continue;
+    const command =
+      typeof (entry as any).tool_input === "object"
+      && typeof (entry as any).tool_input?.command === "string"
+        ? (entry as any).tool_input.command
+        : undefined;
+    out.push({ toolName, command });
+  }
+  return out;
 }
 
 /** Wait for a run to complete. */

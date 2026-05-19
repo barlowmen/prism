@@ -31,6 +31,15 @@ export type RunMetadata = {
   finalText: string | null;
   /** Extracted structured payload from the <result> tag, if parseable. */
   structuredPayload: unknown;
+  /**
+   * Tools the agent tried to invoke that Claude Code denied (typically
+   * because the workspace `.claude/settings.json` doesn't allow them).
+   * Extracted from the CLI's structuredResult.permission_denials at
+   * completion. Orchestrators surface this to the user instead of the
+   * generic "DOCX not on disk" / "no parseable verdict" errors that
+   * the denial path used to produce.
+   */
+  permissionDenials: Array<{ toolName: string; command?: string }>;
 };
 
 /** A line in the per-run log file. */
