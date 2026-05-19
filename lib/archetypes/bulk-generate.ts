@@ -22,6 +22,10 @@ export type BulkGenerateResult = {
   total: number;
   queued: string[];
   alreadyHasBase: string[];
+  /** Archetypes that already had a loop in flight at planning time
+   *  (baseStatus is `generating` or `reviewing`). Surfaced so a stray
+   *  second click on Generate-all-bases doesn't silently double-spawn. */
+  alreadyRunning: string[];
 };
 
 export async function planBulkGenerate(
@@ -30,14 +34,19 @@ export async function planBulkGenerate(
   const all = await listArchetypes();
   const queued: string[] = [];
   const alreadyHasBase: string[] = [];
+  const alreadyRunning: string[] = [];
   for (const a of all) {
+    if (a.baseStatus === "generating" || a.baseStatus === "reviewing") {
+      alreadyRunning.push(a.key);
+      continue;
+    }
     if (a.baseResumePath && !includeExisting) {
       alreadyHasBase.push(a.key);
     } else {
       queued.push(a.key);
     }
   }
-  return { total: all.length, queued, alreadyHasBase };
+  return { total: all.length, queued, alreadyHasBase, alreadyRunning };
 }
 
 /**

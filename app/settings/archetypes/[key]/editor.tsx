@@ -35,6 +35,10 @@ export function ArchetypeEditor({
       ? initial.baseLatestRunId ?? null
       : null,
   );
+  // Errored/stalled archetypes don't auto-mount the run pane (the run
+  // is already done; showing it would just chew screen space). Opt-in:
+  // the panel exposes a Show last run log toggle that flips this flag.
+  const [showHistoricRun, setShowHistoricRun] = useState(false);
 
   const dirty =
     label !== initial.label ||
@@ -232,11 +236,14 @@ export function ArchetypeEditor({
         pass={initial.baseReviewPass}
         generatedAt={initial.baseGeneratedAt}
         lastFeedback={initial.baseLastFeedback}
+        latestRunId={initial.baseLatestRunId}
         hasBase={!!baseResumePath}
         generating={generating}
+        showHistoricRun={showHistoricRun}
         onGenerate={onGenerate}
         onAcceptAnyway={onAcceptAnyway}
         onRestart={onRestart}
+        onToggleHistoricRun={() => setShowHistoricRun((v) => !v)}
       />
 
       {activeRunId && (
@@ -246,6 +253,10 @@ export function ArchetypeEditor({
             router.refresh();
           }}
         />
+      )}
+
+      {!activeRunId && showHistoricRun && initial.baseLatestRunId && (
+        <AgentRunPane runId={initial.baseLatestRunId} />
       )}
 
       <section
@@ -332,11 +343,14 @@ function BaseGenerationPanel({
   pass,
   generatedAt,
   lastFeedback,
+  latestRunId,
   hasBase,
   generating,
+  showHistoricRun,
   onGenerate,
   onAcceptAnyway,
   onRestart,
+  onToggleHistoricRun,
 }: {
   archetypeKey: string;
   archetypeLabel: string;
@@ -344,11 +358,14 @@ function BaseGenerationPanel({
   pass: number;
   generatedAt: string | null;
   lastFeedback: string;
+  latestRunId: string | null;
   hasBase: boolean;
   generating: boolean;
+  showHistoricRun: boolean;
   onGenerate: () => void;
   onAcceptAnyway: () => void;
   onRestart: () => void;
+  onToggleHistoricRun: () => void;
 }) {
   const transient = status === "generating" || status === "reviewing";
 
@@ -447,6 +464,18 @@ function BaseGenerationPanel({
               </pre>
             </details>
           )}
+          {latestRunId && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={onToggleHistoricRun}
+                className="text-[11px] underline cursor-pointer"
+                style={{ color: "var(--color-fg-muted)" }}
+              >
+                {showHistoricRun ? "Hide last run log" : "Show last run log"}
+              </button>
+            </div>
+          )}
         </Callout>
       )}
 
@@ -464,6 +493,20 @@ function BaseGenerationPanel({
             <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
             {lastFeedback || "Unknown error — check the Runs page."}
           </span>
+          {latestRunId && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={onToggleHistoricRun}
+                className="text-[11px] underline cursor-pointer"
+                style={{ color: "var(--color-fg-muted)" }}
+              >
+                {showHistoricRun
+                  ? "Hide last run log"
+                  : "Show last run log (the raw event stream often explains why)"}
+              </button>
+            </div>
+          )}
         </Callout>
       )}
 

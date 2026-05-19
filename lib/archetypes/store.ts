@@ -243,6 +243,37 @@ export async function updateArchetypeBaseState(
   });
 }
 
+/**
+ * Atomic claim for the base-resume generation loop. Reads under the
+ * per-key lock; if the archetype is already in a transient state
+ * (`generating` or `reviewing`), returns null. Otherwise writes
+ * `baseStatus = "generating"` and returns the previous status so the
+ * caller can decide what to do next.
+ *
+ * Two concurrent callers always see exactly one win — the second
+ * observes the status the first just wrote and bails out. This is the
+ * guard that prevents two `generate-all-bases` invocations from
+ * spawning parallel loops on the same archetype.
+ */
+export async function tryClaimBaseGeneration(
+  key: string,
+): Promise<BaseStatus | null> {
+  return withLock(key, async () => {
+    const current = await readArchetype(key);
+    if (!current) throw new Error(`archetype_not_found:${key}`);
+    if (current.baseStatus === "generating" || current.baseStatus === "reviewing") {
+      return null;
+    }
+    const next: Archetype = {
+      ...current,
+      baseStatus: "generating",
+      updatedAt: new Date().toISOString(),
+    };
+    await atomicWriteJSON(archetypePath(key), next);
+    return current.baseStatus;
+  });
+}
+
 export async function deleteArchetype(key: string): Promise<boolean> {
   return withLock(key, async () => {
     try {

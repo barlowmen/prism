@@ -30,7 +30,11 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { INTERVIEWS_DIR, absWorkspace } from "../paths";
-import { readArchetype, updateArchetypeBaseState } from "../archetypes/store";
+import {
+  readArchetype,
+  tryClaimBaseGeneration,
+  updateArchetypeBaseState,
+} from "../archetypes/store";
 import { readArchetypePlaybookBody } from "../archetypes/scaffold";
 import { loadPrompt } from "../prompt-template";
 import { startRun, getRunSnapshot } from "../runs/broker";
@@ -89,7 +93,36 @@ export type StartBaseGenerationInput = {
 
 export type StartResult = { runId: string; meta: RunMetadata };
 
+/**
+ * Public entry — the one API routes and the bulk worker call. Performs
+ * an atomic claim against the archetype's baseStatus; if a loop is
+ * already running on this archetype, throws
+ * `base_loop_already_running:<key>:<status>` so the caller can return a
+ * sensible 409 to the UI. Used to be a single function with no guard,
+ * which let two concurrent generate-all-bases invocations spawn
+ * parallel loops on the same archetype (timed-out review runs then
+ * clobbered the legitimate "ready" status).
+ */
 export async function startBaseGeneration(
+  input: StartBaseGenerationInput,
+): Promise<StartResult> {
+  const previous = await tryClaimBaseGeneration(input.archetypeKey);
+  if (previous === null) {
+    const a = await readArchetype(input.archetypeKey);
+    throw new Error(
+      `base_loop_already_running:${input.archetypeKey}:${a?.baseStatus ?? "transient"}`,
+    );
+  }
+  return spawnBaseGenerationRun(input);
+}
+
+/**
+ * Internal spawn — used by the public entry above (after claim) and by
+ * the orchestrator's needs_revision redraft path (where the archetype
+ * is already in `reviewing` and we're deliberately transitioning to
+ * `generating`). Skips the idle check on purpose.
+ */
+async function spawnBaseGenerationRun(
   input: StartBaseGenerationInput,
 ): Promise<StartResult> {
   const archetype = await readArchetype(input.archetypeKey);
@@ -223,8 +256,14 @@ async function routeAfterBaseReview(
 
   const feedback = (await safeRead(feedbackPath(archetypeKey))) ?? "";
   if (!verdict && feedback) {
-    if (/verdict\s*:\s*ready to submit/i.test(feedback)) verdict = "ready_to_submit";
-    else if (/verdict\s*:\s*needs revision/i.test(feedback)) verdict = "needs_revision";
+    // Strip markdown emphasis (*, _) before matching so the regex
+    // tolerates `**Verdict:** ready to submit`, `_Verdict_: …`, etc.
+    // The naive `\s*` between `:` and the value used to miss the
+    // bold-form, which made stalled passes that didn't emit clean
+    // structured JSON look "errored" even when the markdown was clear.
+    const cleaned = feedback.replace(/[*_]+/g, "");
+    if (/verdict\s*:\s*ready to submit/i.test(cleaned)) verdict = "ready_to_submit";
+    else if (/verdict\s*:\s*needs revision/i.test(cleaned)) verdict = "needs_revision";
   }
 
   if (!verdict) {
@@ -262,8 +301,10 @@ async function routeAfterBaseReview(
     baseLastFeedback: feedback,
   });
 
-  // Loop: redraft with the latest feedback.
-  await startBaseGeneration({ archetypeKey, feedback });
+  // Loop: redraft with the latest feedback. Bypass the public idle
+  // guard — we're deliberately transitioning from `reviewing` to
+  // `generating` as part of the orchestrator's own state machine.
+  await spawnBaseGenerationRun({ archetypeKey, feedback });
 }
 
 /* ------------------------- public manual overrides ------------------------- */

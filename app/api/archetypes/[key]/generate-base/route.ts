@@ -51,9 +51,21 @@ export async function POST(
     const { runId, meta } = await startBaseGeneration({ archetypeKey: key });
     return NextResponse.json({ runId, meta });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: String(err?.message ?? err) },
-      { status: 500 },
-    );
+    const msg = String(err?.message ?? err);
+    // The orchestrator atomically refuses to start a second loop on the
+    // same archetype. Surface that as a 409 so the UI can tell the
+    // user "already running" instead of generic 500.
+    if (msg.startsWith("base_loop_already_running")) {
+      const parts = msg.split(":");
+      return NextResponse.json(
+        {
+          error: "base_loop_already_running",
+          currentStatus: parts[2] ?? null,
+          runId: parts[3] ?? null,
+        },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
