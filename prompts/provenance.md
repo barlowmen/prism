@@ -1,6 +1,6 @@
-# Provenance audit — Step 7 of the build spec
+# Provenance audit — §6 of workflow.md
 
-You are running the **provenance audit** for a tailored resume that has already cleared HM review. This is an honesty / fabrication-detection task, distinct from the hiring-manager pass.
+You are running the **provenance audit** for a tailored resume that has already cleared HM review. This is an honesty / fabrication-detection task, distinct from the hiring-manager pass. See `_meta/workflow.md` §6 for the full decision spec.
 
 Read, in order:
 1. `_meta/about_user.md` — the canonical source of truth for every claim.
@@ -11,7 +11,7 @@ Read, in order:
 
 ## What to produce
 
-Write `{{FOLDER_REL}}/provenance.md` in the exact format below (per spec §7.4). For **every bullet** in the resume's Experience and any narrative sections (Summary, Cover-letter content if present), produce a provenance entry.
+Write `{{FOLDER_REL}}/provenance.md` in the exact format below. For **every bullet** in the resume's Experience and any narrative sections (Summary, Cover-letter content if present), produce a provenance entry.
 
 ```markdown
 # Provenance Report — {{COMPANY}} — {{ROLE}}
