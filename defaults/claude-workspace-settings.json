@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)"
+    ]
+  },
+  "_prism": {
+    "managedBy": "prism — lib/system-files.ts",
+    "purpose": "Pre-approves `node` for the base-resume + per-job draft pipelines so the first run in a fresh workspace doesn't hit a denied-by-default permission gate. The agents run a tailored docx-builder script with node; without this, headless mode has no UI to approve the prompt and the DOCX never gets produced.",
+    "safeToEdit": "Yes — your own additions to permissions.allow stay if you re-seed (system-files.ts only writes this file when it's absent)."
+  }
+}

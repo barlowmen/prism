@@ -2,37 +2,66 @@ import "server-only";
 /**
  * Seed prism-managed system files into the workspace on first need.
  *
- * Three files agents depend on every run live under <workspace>/_meta/:
- *   - workflow.md                  — pipeline spec, agent contract (NOT user-editable)
- *   - resume_style_guide_2026.md   — style/ATS/voice rules (user-editable)
- *   - build_resume_template.js     — DOCX builder template (NOT user-editable)
+ * Two groups of files get seeded:
+ *
+ *   Under <workspace>/_meta/ — agent-facing reference docs:
+ *     - workflow.md                  — pipeline spec (NOT user-editable)
+ *     - resume_style_guide_2026.md   — style/ATS/voice rules (user-editable)
+ *     - build_resume_template.js     — DOCX builder template (NOT user-editable)
+ *
+ *   Under <workspace>/.claude/ — Claude Code project settings:
+ *     - settings.json                — pre-approves `node` so the first
+ *                                       base-resume / per-job draft run
+ *                                       doesn't hit the cold permission
+ *                                       gate (headless mode has no UI to
+ *                                       approve, so the prompt times out
+ *                                       and the build script never runs).
  *
  * The canonical defaults ship with the prism repo at <repo>/defaults/.
  * On the first agent invocation in a workspace, ensureSystemFiles() copies
- * any missing default into <workspace>/_meta/. Existing files are left
- * alone — users who've customized their copy keep it.
+ * any missing default into the workspace. Existing files are left alone —
+ * users who've customized their copy keep it.
  *
  * Hook point: lib/runs/broker.ts:startRun() calls this before spawning the
  * Claude Code subprocess. The cost is one stat per file per run; negligible.
  */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { META_DIR } from "./paths";
+import { META_DIR, WORKSPACE_DIR } from "./paths";
 
 type SystemFile = {
-  /** Relative path under META_DIR. */
-  relPath: string;
+  /** Absolute path the file should land at on disk. */
+  targetAbsPath: string;
   /** Filename under <repo>/defaults/. */
   defaultName: string;
+  /** Friendly label for log lines. */
+  label: string;
 };
 
-const SYSTEM_FILES: SystemFile[] = [
-  { relPath: "workflow.md", defaultName: "workflow.md" },
-  { relPath: "resume_style_guide_2026.md", defaultName: "resume_style_guide_2026.md" },
-  { relPath: "build_resume_template.js", defaultName: "build_resume_template.js" },
-];
-
 const DEFAULTS_DIR = path.join(process.cwd(), "defaults");
+
+const SYSTEM_FILES: SystemFile[] = [
+  {
+    targetAbsPath: path.join(META_DIR, "workflow.md"),
+    defaultName: "workflow.md",
+    label: "_meta/workflow.md",
+  },
+  {
+    targetAbsPath: path.join(META_DIR, "resume_style_guide_2026.md"),
+    defaultName: "resume_style_guide_2026.md",
+    label: "_meta/resume_style_guide_2026.md",
+  },
+  {
+    targetAbsPath: path.join(META_DIR, "build_resume_template.js"),
+    defaultName: "build_resume_template.js",
+    label: "_meta/build_resume_template.js",
+  },
+  {
+    targetAbsPath: path.join(WORKSPACE_DIR, ".claude", "settings.json"),
+    defaultName: "claude-workspace-settings.json",
+    label: ".claude/settings.json",
+  },
+];
 
 let cachedRun: Promise<void> | null = null;
 
@@ -52,25 +81,23 @@ export function ensureSystemFiles(): Promise<void> {
 }
 
 async function seedMissing(): Promise<void> {
-  await fs.mkdir(META_DIR, { recursive: true });
   for (const f of SYSTEM_FILES) {
-    const targetPath = path.join(META_DIR, f.relPath);
-    const sourcePath = path.join(DEFAULTS_DIR, f.defaultName);
     let exists = false;
     try {
-      await fs.stat(targetPath);
+      await fs.stat(f.targetAbsPath);
       exists = true;
     } catch {}
     if (exists) continue;
     try {
-      const content = await fs.readFile(sourcePath, "utf8");
-      await fs.writeFile(targetPath, content, "utf8");
+      const content = await fs.readFile(path.join(DEFAULTS_DIR, f.defaultName), "utf8");
+      await fs.mkdir(path.dirname(f.targetAbsPath), { recursive: true });
+      await fs.writeFile(f.targetAbsPath, content, "utf8");
     } catch (err: any) {
       // Don't fail the run if a default is missing from the repo — log
       // and continue. Worst case: the agent reads an empty/missing file
       // and the user sees a useful error, which is recoverable.
       console.warn(
-        `[system-files] failed to seed ${f.relPath} from ${f.defaultName}:`,
+        `[system-files] failed to seed ${f.label} from ${f.defaultName}:`,
         String(err?.message ?? err),
       );
     }
