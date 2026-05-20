@@ -31,23 +31,15 @@ export default async function JobDetailPage({
     }
   }
 
+  const { hasOpenQuestion } = await import("@/lib/jobs/question-state");
+
   const dq = files.known.find((f) => f.key === "dispatcher_question");
   const hasOpenDispatcherQuestion =
-    !!dq?.exists &&
-    typeof dq.content === "string" &&
-    !/^##\s+Answer/im.test(dq.content);
+    !!dq?.exists && typeof dq.content === "string" && hasOpenQuestion(dq.content);
 
-  // Research questions are "open" when questions.md exists and the
-  // most recent question text appears AFTER the most recent "## Answer"
-  // heading — i.e. a research re-pass surfaced new questions since the
-  // user's last answer. For the first round the regex just checks for
-  // any Answer heading.
   const qf = files.known.find((f) => f.key === "questions");
   const hasOpenResearchQuestions =
-    !!qf?.exists &&
-    typeof qf.content === "string" &&
-    qf.content.trim().length > 0 &&
-    !/^##\s+Answer/im.test(qf.content);
+    !!qf?.exists && typeof qf.content === "string" && hasOpenQuestion(qf.content);
 
   const prov = files.known.find((f) => f.key === "provenance");
   const provFlagged =

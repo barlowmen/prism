@@ -130,9 +130,12 @@ async function routeAfterResearch(jobId: string): Promise<JobStatus> {
   const questionsPath = path.join(job.folderPath, "questions.md");
   if (await fileExists(questionsPath)) {
     const txt = (await safeRead(questionsPath)) ?? "";
-    // An "## Answer" heading means the user already responded to a prior
-    // research-questions pass; treat that as resolved and move on.
-    if (txt.trim().length > 0 && !/^##\s+Answer/im.test(txt)) {
+    // Open question = file has content AND no substantive answer
+    // section yet. Uses the shared question-state helper so empty
+    // "## Answer" placeholders the agent writes don't count as
+    // already-answered.
+    const { hasOpenQuestion } = await import("../jobs/question-state");
+    if (hasOpenQuestion(txt)) {
       await updateJob(jobId, {
         status: "awaiting_input",
         statusNote: "research surfaced honesty/gap questions",
