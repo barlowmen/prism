@@ -136,14 +136,34 @@ export class RunLogWriter {
   }
 }
 
-/** Update the runs index with one record (insert or replace by runId). */
+/**
+ * Single in-process write queue for the runs index. read-modify-write
+ * on runs.json must be serialized — concurrent upserts (e.g. one run's
+ * completion lands at the same moment as another run's debounced
+ * live-token update) used to clobber each other. We saw a completed
+ * run flip back to "running" in the index because a stale concurrent
+ * write captured an older snapshot.
+ */
+let runsIndexQueue: Promise<unknown> = Promise.resolve();
+
+async function withRunsIndexLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = runsIndexQueue.then(fn, fn);
+  runsIndexQueue = next.catch(() => {});
+  return next as Promise<T>;
+}
+
+/** Update the runs index with one record (insert or replace by runId).
+ *  Serialized via withRunsIndexLock so concurrent callers don't lose
+ *  each other's updates. */
 export async function upsertRunIndex(meta: RunMetadata): Promise<void> {
-  const all = await readRunsIndex();
-  const idx = all.findIndex((r) => r.runId === meta.runId);
-  if (idx >= 0) all[idx] = meta;
-  else all.unshift(meta);
-  // Cap the index to avoid unbounded growth.
-  await writeRunsIndex(all.slice(0, 2000));
+  await withRunsIndexLock(async () => {
+    const all = await readRunsIndex();
+    const idx = all.findIndex((r) => r.runId === meta.runId);
+    if (idx >= 0) all[idx] = meta;
+    else all.unshift(meta);
+    // Cap the index to avoid unbounded growth.
+    await writeRunsIndex(all.slice(0, 2000));
+  });
 }
 
 /**

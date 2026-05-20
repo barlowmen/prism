@@ -31,6 +31,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { APPS_DIR, META_DIR, STATE_DIR } from "../paths";
 import {
+  readRunLog,
   readRunsIndex,
   upsertRunIndex,
 } from "./store";
@@ -287,24 +288,49 @@ function describeReason(run: RunMetadata): string {
 async function sweepRuns(): Promise<Set<string>> {
   const orphaned = new Set<string>();
   const all = await readRunsIndex();
-  const note = "orphaned by server restart — process died before run completed";
+  const orphanNote = "orphaned by server restart — process died before run completed";
   const now = new Date().toISOString();
+  let staleReconciled = 0;
   for (const meta of all) {
     if (meta.status !== "running") continue;
+
+    // Before declaring orphan, check the per-run log. The index can lag
+    // behind the log when upsertRunIndex races with another write
+    // (saw a run sit at "running" in the index for hours after its
+    // real meta_end landed in the log). If the log has a meta_end,
+    // trust that — it's authoritative.
+    const logged = await readRunLog(meta.runId).catch(() => ({ meta: null }));
+    if (
+      logged.meta &&
+      logged.meta.status !== "running" &&
+      logged.meta.completedAt
+    ) {
+      await upsertRunIndex(logged.meta).catch(() => {});
+      staleReconciled++;
+      // Don't add to `orphaned` — the run truly completed; downstream
+      // sweepJobs / sweepArchetypes shouldn't treat it as an orphan.
+      continue;
+    }
+
     orphaned.add(meta.runId);
     const fixed: RunMetadata = {
       ...meta,
       status: "failed",
       exitCode: -1,
       completedAt: now,
-      finalText: meta.finalText ?? note,
+      finalText: meta.finalText ?? orphanNote,
     };
-    await appendSyntheticTerminator(meta.runId, fixed, note).catch(() => {});
+    await appendSyntheticTerminator(meta.runId, fixed, orphanNote).catch(() => {});
     await upsertRunIndex(fixed).catch(() => {});
   }
   if (orphaned.size > 0) {
     console.warn(
       `[orphan-sweep] cleaned ${orphaned.size} orphaned run${orphaned.size === 1 ? "" : "s"}`,
+    );
+  }
+  if (staleReconciled > 0) {
+    console.warn(
+      `[orphan-sweep] reconciled ${staleReconciled} stale "running" entr${staleReconciled === 1 ? "y" : "ies"} from per-run log meta_end`,
     );
   }
   return orphaned;
