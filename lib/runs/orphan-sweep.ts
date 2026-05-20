@@ -29,7 +29,7 @@ import "server-only";
  */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { META_DIR, STATE_DIR } from "../paths";
+import { APPS_DIR, META_DIR, STATE_DIR } from "../paths";
 import {
   readRunsIndex,
   upsertRunIndex,
@@ -69,6 +69,13 @@ async function doSweep(): Promise<void> {
   // (timeout) leaves the Job stuck too. Pass the full runs index so
   // sweepJobs can look up status by latestRunId.
   await sweepJobs();
+  // Link orphaned folders on disk back to their owning Jobs by URL.
+  // Catches the legacy case where a dispatcher died mid-run, leaving
+  // apps/<Co>/<Role>/ on disk but the Job's folderPath still null.
+  // Going forward, the dispatcher writes `.prism-job-id` sidecars when
+  // it creates the folder, so new orphans don't happen — this only
+  // fixes the existing data drift.
+  await linkOrphanFolders();
   if (orphanedRunIds.size > 0) {
     await sweepArchetypes(orphanedRunIds);
   }
@@ -127,6 +134,141 @@ async function sweepJobs(): Promise<void> {
   if (reset > 0) {
     console.warn(
       `[orphan-sweep] reconciled ${reset} Job${reset === 1 ? "" : "s"} stuck in a transient state with a dead underlying run`,
+    );
+  }
+}
+
+/**
+ * Walk apps/<Co>/<Role>/ folders. For any folder without a
+ * .prism-job-id sidecar AND not owned by any Job's folderPath, read
+ * its job_description.md to find the source URL, look up the Job by
+ * matching sourceUrl, and:
+ *   - write `.prism-job-id` sidecar so import-preview skips the folder
+ *   - update the Job's folderPath so a future re-dispatch reuses it
+ *
+ * One-time data migration for folders that pre-date the sidecar fix.
+ * Cheap on subsequent runs (early-exits if no Jobs lack folderPath).
+ */
+async function linkOrphanFolders(): Promise<void> {
+  let companies: string[];
+  try {
+    companies = (await fs.readdir(APPS_DIR, { withFileTypes: true }))
+      .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+      .map((d) => d.name);
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return;
+    throw err;
+  }
+
+  // Load all Jobs into a URL → Job map. We're looking for matches where
+  // a Job has a sourceUrl but no (or wrong) folderPath.
+  let entries: string[];
+  try {
+    entries = await fs.readdir(JOBS_DIR);
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return;
+    throw err;
+  }
+
+  type SimpleJob = {
+    id: string;
+    sourceUrl: string | null;
+    folderPath: string | null;
+    raw: any;
+    diskPath: string;
+  };
+  const byUrl = new Map<string, SimpleJob>();
+  const ownedPaths = new Set<string>();
+  for (const name of entries) {
+    if (!name.endsWith(".json") || name.startsWith(".")) continue;
+    const p = path.join(JOBS_DIR, name);
+    let j: any;
+    try {
+      j = JSON.parse(await fs.readFile(p, "utf8"));
+    } catch {
+      continue;
+    }
+    if (j?.folderPath) ownedPaths.add(j.folderPath);
+    if (typeof j?.sourceUrl === "string" && j.sourceUrl) {
+      // Prefer Jobs that don't already have a folderPath set when
+      // multiple share a URL.
+      const existing = byUrl.get(j.sourceUrl);
+      if (!existing || (existing.folderPath && !j.folderPath)) {
+        byUrl.set(j.sourceUrl, {
+          id: j.id,
+          sourceUrl: j.sourceUrl,
+          folderPath: j.folderPath ?? null,
+          raw: j,
+          diskPath: p,
+        });
+      }
+    }
+  }
+
+  let linked = 0;
+  for (const company of companies) {
+    let roles: string[];
+    try {
+      roles = (
+        await fs.readdir(path.join(APPS_DIR, company), { withFileTypes: true })
+      )
+        .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+        .map((d) => d.name);
+    } catch {
+      continue;
+    }
+    for (const role of roles) {
+      const folderAbs = path.join(APPS_DIR, company, role);
+      // Skip if claimed already (sidecar OR folderPath ownership).
+      try {
+        await fs.stat(path.join(folderAbs, ".prism-job-id"));
+        continue;
+      } catch {}
+      if (ownedPaths.has(folderAbs)) continue;
+
+      // Extract source URL from job_description.md.
+      let jdContent: string;
+      try {
+        jdContent = await fs.readFile(
+          path.join(folderAbs, "job_description.md"),
+          "utf8",
+        );
+      } catch {
+        continue;
+      }
+      const urlMatch = jdContent.match(/https?:\/\/[^\s)"<>]+/);
+      if (!urlMatch) continue;
+      // Clean trailing punctuation a URL extractor might pick up.
+      const url = urlMatch[0].replace(/[.,;:'"`)]+$/, "");
+      const job = byUrl.get(url);
+      if (!job) continue;
+
+      // Link: write sidecar + update Job's folderPath.
+      try {
+        await fs.writeFile(
+          path.join(folderAbs, ".prism-job-id"),
+          job.id,
+          "utf8",
+        );
+        const updated = {
+          ...job.raw,
+          folderPath: folderAbs,
+          updatedAt: new Date().toISOString(),
+        };
+        await fs.writeFile(
+          job.diskPath,
+          JSON.stringify(updated, null, 2) + "\n",
+          "utf8",
+        );
+        linked++;
+      } catch {
+        // best-effort; next sweep retries
+      }
+    }
+  }
+  if (linked > 0) {
+    console.warn(
+      `[orphan-sweep] linked ${linked} orphan folder${linked === 1 ? "" : "s"} back to their owning Jobs by URL match`,
     );
   }
 }
