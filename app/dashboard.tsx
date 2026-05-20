@@ -321,26 +321,46 @@ function Column({
         <span style={{ color: "var(--color-fg-muted)" }}>{jobs.length}</span>
       </div>
       <ul className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-        {jobs.map((j) => (
-          <li key={j.id}>
-            <Link
-              href={`/jobs/${encodeURIComponent(j.id)}`}
-              className="block px-3 py-2 hover:bg-[var(--color-surface-2)] transition-colors"
-            >
-              <div className="text-xs font-medium truncate">{j.company}</div>
-              <div
-                className="text-[11px] mt-0.5 truncate"
-                style={{ color: "var(--color-fg-muted)" }}
+        {jobs.map((j) => {
+          // Bulk-paste + URL-only manual jobs have empty company/role
+          // until the dispatcher classifies them. Render the URL
+          // hostname + a faded placeholder so the row isn't visually
+          // empty — was rendering as just the external-link icon
+          // before, which read as broken UI.
+          const hasName = j.company || j.role;
+          const hostname = hostnameFromUrl(j.sourceUrl);
+          return (
+            <li key={j.id}>
+              <Link
+                href={`/jobs/${encodeURIComponent(j.id)}`}
+                className="block px-3 py-2 hover:bg-[var(--color-surface-2)] transition-colors"
               >
-                {j.role}
-              </div>
-              <JobMeta job={j} />
-            </Link>
-          </li>
-        ))}
+                <div className="text-xs font-medium truncate">
+                  {hasName ? j.company : hostname || "Pasted URL"}
+                </div>
+                <div
+                  className="text-[11px] mt-0.5 truncate"
+                  style={{ color: "var(--color-fg-muted)" }}
+                >
+                  {hasName ? j.role : <em>Awaiting dispatcher…</em>}
+                </div>
+                <JobMeta job={j} />
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
+}
+
+function hostnameFromUrl(url: string | null): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function JobMeta({ job }: { job: Job }) {
