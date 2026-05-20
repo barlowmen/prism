@@ -65,22 +65,36 @@ export default async function HomePage() {
  * Same dry-run scan as /api/jobs/import/preview, but inlined so the
  * dashboard doesn't have to HTTP-self-fetch its own route during SSR.
  *
- * Two-stage match per folder:
+ * Three-stage match per folder:
  *   1. Direct id match — `Company__Role` derived from folder names.
  *   2. folderPath ownership — any Job (regardless of its id) whose
  *      folderPath points at this directory.
+ *   3. Active-dispatcher suppression — when ANY dispatcher is running
+ *      somewhere in the app, every folder is suppressed. Dispatchers
+ *      create their folders during the run and only set the owning
+ *      Job's folderPath in the post-completion handler — sometimes
+ *      5-20 minutes later. During that window the folder looks like
+ *      an orphan but isn't. Wait for all dispatchers to settle, then
+ *      re-evaluate; truly-orphaned folders re-emerge with no false
+ *      positives.
  *
  * Stage 2 catches bulk-paste records whose id stayed `pasted_<uuid>`
- * because the dispatcher couldn't rename them (e.g. the rename happens
- * after the orchestrator's done handler, which is the typical case).
- * Without it the user sees "X folders not yet imported" pointing at
- * folders prism already tracks — clicking Import would create
- * duplicates.
+ * because the dispatcher couldn't rename them. Stage 3 is the
+ * belt-and-suspenders fix for the in-flight race that stage 2's
+ * folderPath check can't catch (Job exists but its folderPath is null
+ * until the orchestrator gets to it).
  */
 async function countImportPreview(): Promise<{
   notImported: number;
   preview: Array<{ company: string; role: string }>;
 }> {
+  // Stage 3 suppression — short-circuit before any disk work.
+  const { findActiveRuns } = await import("@/lib/runs/store");
+  const activeDispatchers = await findActiveRuns({ phase: "dispatch" });
+  if (activeDispatchers.length > 0) {
+    return { notImported: 0, preview: [] };
+  }
+
   let companies: string[] = [];
   try {
     companies = (await fs.readdir(APPS_DIR, { withFileTypes: true }))
@@ -114,17 +128,6 @@ async function countImportPreview(): Promise<{
       const folderAbs = path.join(APPS_DIR, company, role);
       // Skip if any Job already owns this folder, regardless of id shape.
       if (ownedPaths.has(folderAbs)) continue;
-      // Skip very-recently-created folders. The dispatcher creates the
-      // folder mid-run and the orchestrator's routeAfterDispatch only
-      // writes folderPath onto the Job after the subprocess completes
-      // — ~5-30 seconds later. Refreshing the dashboard during that
-      // window briefly shows the folder as "unimported" even though
-      // a dispatcher run is actively producing it. 60 s of headroom
-      // covers the worst case; real legacy folders are always older.
-      try {
-        const st = await fs.stat(folderAbs);
-        if (Date.now() - st.mtimeMs < 60_000) continue;
-      } catch {}
       // Also skip if a Job with the derived id exists (covers the
       // case where the Job exists but folderPath wasn't set, e.g.
       // legacy imports).
