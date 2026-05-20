@@ -1,3 +1,16 @@
+/**
+ * Top-of-page header pattern used everywhere — Dashboard, Settings
+ * subpages, Job detail, Prep, etc. Three slots: title (h1, big),
+ * description (one-liner sub), actions (right-side button cluster).
+ *
+ * Kept narrow on purpose. Different surfaces vary wildly in what they
+ * need below the header; this just owns the title row so they all
+ * look the same.
+ *
+ * SectionEyebrow is the smaller all-caps label used to demarcate
+ * sub-sections within a page (e.g. "INBOX", "IN PROGRESS" on the
+ * kanban). Same muted color, uppercase tracking, no border.
+ */
 import type { ReactNode } from "react";
 
 type Props = {

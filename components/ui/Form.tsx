@@ -1,5 +1,24 @@
 "use client";
 
+/**
+ * Two form primitives that share the same label / help / input chrome:
+ *
+ *   - <Field>  for single-line inputs (URL, name, key).
+ *   - <Area>   for multi-line textareas (matching hints, tailoring rules,
+ *              question answers, etc.).
+ *
+ * Both take a `value` + `onChange(string)` pair rather than the native
+ * ChangeEvent so callers don't have to think about input types — just
+ * useState a string and pass the setter. Both turn off spellcheck
+ * because most of what we type here is keys / slugs / markdown that
+ * Chrome's spell-checker mangles.
+ *
+ * `mono` flips the input to the monospace token, used wherever the
+ * content is structured (paths, IDs, markdown).
+ *
+ * For free-form code-shaped editors with line numbers etc., see
+ * CodeArea — separate component, different surface treatment.
+ */
 import type { ChangeEvent, ReactNode } from "react";
 
 type FieldProps = {

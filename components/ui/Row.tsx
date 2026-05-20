@@ -1,3 +1,16 @@
+/**
+ * Label/value definition-list row. Used in metadata panels — Health,
+ * Job detail header, archetype edit summary — anywhere we show
+ * "field: value" pairs in a stack rather than a table.
+ *
+ * Value truncates by default with a native browser tooltip showing the
+ * full string. fullWidthValue=true bypasses truncation when the value
+ * is a path you want to be readable at a glance.
+ *
+ * `tone` colors only the value, not the label — keeps the label always
+ * readable while letting numeric/status values pop (e.g. "Status: ok"
+ * green, "Tokens used: 1.2M" warn).
+ */
 import type { ReactNode } from "react";
 
 type Tone = "ok" | "warn" | "err" | "muted" | "accent";

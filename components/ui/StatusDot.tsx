@@ -1,3 +1,12 @@
+/**
+ * Tiny colored circle. Inline status indicator next to row text —
+ * "this run is still going" (pulsing accent), "this finished cleanly"
+ * (ok), "this errored" (err), etc. Decorative; always paired with
+ * text so screen readers don't need to interpret the color.
+ *
+ * `pulsing` triggers a slow CSS pulse animation — use it only on
+ * actively-changing things (live SSE streams, in-flight runs).
+ */
 import type { CSSProperties } from "react";
 
 type Tone = "ok" | "warn" | "err" | "accent" | "muted";

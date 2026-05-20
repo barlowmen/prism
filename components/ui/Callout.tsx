@@ -1,3 +1,20 @@
+/**
+ * Boxed message with a tone-colored left edge. Used for every banner-y
+ * affordance in the app — "X folders not yet imported", "Anthropic
+ * rate-limited", "Base resume ready", first-time hints, etc.
+ *
+ * Four tones, each tied to an oklch token in app/globals.css:
+ *   - info   — neutral surface, used for orientation / status with no
+ *              urgency (e.g. "How prism works", "All caught up").
+ *   - accent — amber. Real CTAs that aren't problems (Generate, Approve).
+ *   - warn   — amber-orange. "You should look at this" but not broken
+ *              (stalled loops, missing DOCX, queued items).
+ *   - err    — red. Something actually broke (failed runs, errored Jobs).
+ *
+ * Layout: left border = tone color (2px), light tone background, title
+ * row, body in fg-muted. Optional `action` slot on the right for a
+ * single button (e.g. "Re-dispatch all" next to an errored banner).
+ */
 import type { ReactNode } from "react";
 
 type Tone = "info" | "accent" | "warn" | "err";
