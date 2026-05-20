@@ -19,6 +19,7 @@ import "server-only";
 import { launchClaude, type AgentPhase, type AgentStreamEvent, type LaunchResult } from "../claude-launcher";
 import { ensureSystemFiles } from "../system-files";
 import { ensureOrphanSweep } from "./orphan-sweep";
+import { acquireSpawnSlot, releaseSpawnSlot } from "./throttle";
 import {
   RunLogWriter,
   emptyTokenTotals,
@@ -73,6 +74,17 @@ export async function startRun(input: StartRunInput): Promise<{
   // pattern as ensureSystemFiles, so the cost is amortized across the
   // life of this process.
   await ensureOrphanSweep();
+  // Wait for a global spawn slot. Caps concurrent agent runs at 3 to
+  // stay under Anthropic's server-side rate limit. Released in the
+  // done.finally handler below — or in the catch path here if
+  // launchClaude itself throws before the done promise gets wired up.
+  await acquireSpawnSlot();
+  let slotReleased = false;
+  const releaseOnce = () => {
+    if (slotReleased) return;
+    slotReleased = true;
+    releaseSpawnSlot();
+  };
   const runId = newRunId();
   const startedAt = new Date().toISOString();
   const meta: RunMetadata = {
@@ -88,6 +100,7 @@ export async function startRun(input: StartRunInput): Promise<{
     finalText: null,
     structuredPayload: null,
     permissionDenials: [],
+    rateLimited: false,
   };
 
   const writer = new RunLogWriter(runId);
@@ -145,16 +158,25 @@ export async function startRun(input: StartRunInput): Promise<{
     });
   };
 
-  const { cancel, done } = launchClaude({
-    prompt: input.prompt,
-    cwd: input.cwd,
-    timeoutMs: input.timeoutMs,
-    phase: input.phase,
-    jobId: input.jobId ?? undefined,
-    resumeSessionId: input.resumeSessionId,
-    appendSystemPrompt: input.appendSystemPrompt,
-    onStreamEvent,
-  });
+  let cancel: () => void;
+  let done: Promise<LaunchResult>;
+  try {
+    ({ cancel, done } = launchClaude({
+      prompt: input.prompt,
+      cwd: input.cwd,
+      timeoutMs: input.timeoutMs,
+      phase: input.phase,
+      jobId: input.jobId ?? undefined,
+      resumeSessionId: input.resumeSessionId,
+      appendSystemPrompt: input.appendSystemPrompt,
+      onStreamEvent,
+    }));
+  } catch (err) {
+    // launchClaude threw before producing a done promise. Release the
+    // slot manually so we don't strand a spawn-pool slot.
+    releaseOnce();
+    throw err;
+  }
   state.cancel = cancel;
 
   done
@@ -167,6 +189,7 @@ export async function startRun(input: StartRunInput): Promise<{
       meta.status = statusFromExit(r.exitCode, r.timedOut, /*cancelled*/ false);
       meta.structuredPayload = extractResultPayload(r.finalText ?? "");
       meta.permissionDenials = extractPermissionDenials(r.structuredResult);
+      meta.rateLimited = isRateLimitedFinalText(r.finalText ?? "");
 
       await writer.drain();
       await writer.writeMetaEnd(meta);
@@ -205,6 +228,12 @@ export async function startRun(input: StartRunInput): Promise<{
           l(recorded);
         } catch {}
       }
+    })
+    .finally(() => {
+      // Free the throttle slot regardless of how the run ended. Without
+      // this a crashed run holds its slot forever and gradually starves
+      // the pool.
+      releaseOnce();
     });
 
   return { runId, meta, done };
@@ -257,6 +286,23 @@ function extractResultPayload(finalText: string): unknown {
   } catch {
     return m[1].trim();
   }
+}
+
+/**
+ * Pattern-match Anthropic's server-side rate-limit signature in the
+ * run's final text. The exact string we see in practice is
+ * "API Error: Server is temporarily limiting requests (not your usage
+ * limit) · Rate limited" — but the phrasing has minor variations, so
+ * we look for the two most-stable substrings rather than an exact
+ * match. Used by orchestrators to route transient failures through
+ * scheduleRetry instead of marking jobs errored on the first miss.
+ */
+export function isRateLimitedFinalText(finalText: string): boolean {
+  if (!finalText) return false;
+  return (
+    /api error/i.test(finalText) &&
+    (/rate.?limited/i.test(finalText) || /temporarily limiting requests/i.test(finalText))
+  );
 }
 
 /**

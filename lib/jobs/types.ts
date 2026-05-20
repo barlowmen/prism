@@ -68,6 +68,11 @@ export type Job = {
   /** Archetype key the dispatcher chose for this job. Drives the draft
    *  agent's base-resume selection. */
   chosenArchetypeKey?: string | null;
+  /** How many times the orchestrator has scheduled a retry for the
+   *  current phase because of a transient failure (Anthropic API
+   *  rate-limiting, typically). Resets to 0 on a successful run.
+   *  Counted by lib/runs/retry.ts; capped at MAX_RETRY_ATTEMPTS (4). */
+  retryAttempts?: number;
 };
 
 /** What a list endpoint returns per row. Full Job for now; thin if needed later. */

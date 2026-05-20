@@ -139,6 +139,7 @@ export type JobUpdate = {
   latestRunPhase?: string | null;
   chosenArchetypeKey?: string | null;
   statusNote?: string;
+  retryAttempts?: number;
 };
 
 /**
@@ -184,6 +185,9 @@ export async function updateJob(id: string, patch: JobUpdate): Promise<Job> {
     if (patch.chosenArchetypeKey !== undefined) {
       if (patch.chosenArchetypeKey === null) delete next.chosenArchetypeKey;
       else next.chosenArchetypeKey = patch.chosenArchetypeKey;
+    }
+    if (patch.retryAttempts !== undefined) {
+      next.retryAttempts = patch.retryAttempts;
     }
 
     await atomicWriteJSON(jobFilePath(id), next);

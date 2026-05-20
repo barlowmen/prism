@@ -137,6 +137,12 @@ export function Dashboard(props: Props) {
         </div>
       )}
 
+      {(grouped["errored"]?.length ?? 0) > 0 && (
+        <div className="mb-6">
+          <RedispatchErroredBanner count={grouped["errored"].length} />
+        </div>
+      )}
+
       <div className="space-y-8">
         {groupOrder.map((group) => {
           const cols = columnsByGroup[group];
@@ -186,6 +192,57 @@ export function Dashboard(props: Props) {
 
       {pasteOpen && <PasteJobModal onClose={() => setPasteOpen(false)} />}
     </main>
+  );
+}
+
+function RedispatchErroredBanner({ count }: { count: number }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await fetch("/api/jobs/redispatch-errored", { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) {
+        setMsg(`error: ${data?.error ?? `HTTP ${r.status}`}`);
+        return;
+      }
+      const parts: string[] = [];
+      if (data.dispatched.length > 0) {
+        parts.push(`re-dispatching ${data.dispatched.length}`);
+      }
+      if (data.skippedNoUrl.length > 0) {
+        parts.push(`skipped ${data.skippedNoUrl.length} (no source URL)`);
+      }
+      setMsg(parts.join(" · ") || "nothing to do");
+      router.refresh();
+    } catch (e) {
+      setMsg(`error: ${String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Callout
+      tone="warn"
+      title={
+        <>
+          <strong>{count}</strong> errored job{count === 1 ? "" : "s"} — most often Anthropic rate-limiting
+        </>
+      }
+      action={
+        <Button variant="primary" onClick={run} disabled={busy}>
+          {busy ? "Queuing…" : "Re-dispatch all"}
+        </Button>
+      }
+    >
+      Re-dispatch runs through the global spawn throttle (3 in flight at most)
+      so we don&apos;t re-trigger the same load shedder that produced the failures.
+      Jobs without a stored source URL are skipped.
+      {msg && <div className="mt-1 text-xs font-mono">{msg}</div>}
+    </Callout>
   );
 }
 

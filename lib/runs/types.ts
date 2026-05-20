@@ -40,6 +40,16 @@ export type RunMetadata = {
    * the denial path used to produce.
    */
   permissionDenials: Array<{ toolName: string; command?: string }>;
+  /**
+   * True when the run's finalText contains Anthropic's server-side
+   * rate-limit signature ("API Error … Rate limited" / "temporarily
+   * limiting requests"). This is distinct from the user's subscription
+   * quota — it's API load shedding. Orchestrators check this before
+   * marking jobs errored and route through scheduleRetry instead so
+   * the user doesn't have to manually re-dispatch every transient
+   * failure.
+   */
+  rateLimited: boolean;
 };
 
 /** A line in the per-run log file. */

@@ -222,6 +222,42 @@ export async function routeAfterDispatch(
   let decision = parseDecision(classification ?? "");
   if (!decision && hasDispatcherQuestion) decision = "NEEDS-DISCUSSION";
 
+  // Before falling through to "no decision → errored", check whether
+  // the run actually hit Anthropic's rate limiter. That's a transient
+  // failure that should auto-retry, not get clobbered as a permanent
+  // error. Pattern detected at broker level via meta.rateLimited.
+  if (!decision) {
+    const snap = getRunSnapshot(runId);
+    if (snap?.meta.rateLimited) {
+      const job = await readJob(jobId);
+      const attempt = job?.retryAttempts ?? 0;
+      const { scheduleRetry, MAX_RETRY_ATTEMPTS } = await import("../runs/retry");
+      const result = scheduleRetry(attempt, async () => {
+        // Re-spawn dispatcher with the same inputs. The retry runs in
+        // the background; the user sees the job re-enter dispatching.
+        const postingUrl = job?.sourceUrl;
+        if (!postingUrl) return;
+        await startDispatcher({ jobId, postingUrl });
+      });
+      if (result.scheduled) {
+        await updateJob(jobId, {
+          status: "dispatching",
+          statusNote:
+            `Anthropic API rate-limited (server-side load shedding — not your subscription quota). ` +
+            `Retrying in ${result.humanDelay} (attempt ${result.nextAttempt}/${MAX_RETRY_ATTEMPTS}).`,
+          retryAttempts: result.nextAttempt,
+        });
+        return "dispatching";
+      }
+      // Max retries reached — give up and surface the permanent error.
+      await updateJob(jobId, {
+        status: "errored",
+        statusNote: `Anthropic rate-limited after ${MAX_RETRY_ATTEMPTS} retry attempts. Re-dispatch manually when traffic clears.`,
+      });
+      return "errored";
+    }
+  }
+
   let next: JobStatus;
   let note: string;
   let autoKickResearch = false;
@@ -243,7 +279,12 @@ export async function routeAfterDispatch(
       next = "errored";
       note = "dispatcher completed without parseable decision";
   }
-  await updateJob(jobId, { status: next, statusNote: note });
+  // Successful decision — clear retry counter since we're moving forward.
+  await updateJob(jobId, {
+    status: next,
+    statusNote: note,
+    retryAttempts: 0,
+  } as any);
   if (autoKickResearch) {
     // Fire-and-forget. Auto-progression per spec §6.
     startResearch({ jobId }).catch(async (err) => {
