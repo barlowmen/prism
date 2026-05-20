@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { redirect } from "next/navigation";
 import { listJobs, readJob, deriveJobId } from "@/lib/jobs/store";
+import { ensureShadowDedupe } from "@/lib/jobs/dedupe-shadows";
 import { findActiveRuns } from "@/lib/runs/store";
 import {
   COLUMNS,
@@ -33,6 +34,9 @@ export default async function HomePage() {
     redirect("/settings/profile?first_run=1");
   }
 
+  // Sweep any shadow `pasted_*` records left over from before the
+  // dispatcher-rename logic landed. Cached once per process, cheap.
+  await ensureShadowDedupe();
   const [jobs, importPreview, activeDiscovery] = await Promise.all([
     listJobs(),
     countImportPreview(),
@@ -71,6 +75,18 @@ export default async function HomePage() {
 /**
  * Same dry-run scan as /api/jobs/import/preview, but inlined so the
  * dashboard doesn't have to HTTP-self-fetch its own route during SSR.
+ *
+ * Two-stage match per folder:
+ *   1. Direct id match — `Company__Role` derived from folder names.
+ *   2. folderPath ownership — any Job (regardless of its id) whose
+ *      folderPath points at this directory.
+ *
+ * Stage 2 catches bulk-paste records whose id stayed `pasted_<uuid>`
+ * because the dispatcher couldn't rename them (e.g. the rename happens
+ * after the orchestrator's done handler, which is the typical case).
+ * Without it the user sees "X folders not yet imported" pointing at
+ * folders prism already tracks — clicking Import would create
+ * duplicates.
  */
 async function countImportPreview(): Promise<{
   notImported: number;
@@ -86,6 +102,14 @@ async function countImportPreview(): Promise<{
     throw err;
   }
 
+  // Build a set of folderPaths owned by any existing Job, so we can
+  // skip directories that are already tracked under a different id.
+  const { listJobs } = await import("@/lib/jobs/store");
+  const ownedPaths = new Set<string>();
+  for (const j of await listJobs()) {
+    if (j.folderPath) ownedPaths.add(j.folderPath);
+  }
+
   let notImported = 0;
   const preview: Array<{ company: string; role: string }> = [];
   for (const company of companies) {
@@ -98,6 +122,12 @@ async function countImportPreview(): Promise<{
       continue;
     }
     for (const role of roles) {
+      const folderAbs = path.join(APPS_DIR, company, role);
+      // Skip if any Job already owns this folder, regardless of id shape.
+      if (ownedPaths.has(folderAbs)) continue;
+      // Also skip if a Job with the derived id exists (covers the
+      // case where the Job exists but folderPath wasn't set, e.g.
+      // legacy imports).
       const existing = await readJob(deriveJobId(company, role));
       if (!existing) {
         notImported++;

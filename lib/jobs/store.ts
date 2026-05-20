@@ -102,6 +102,43 @@ export async function writeJob(job: Job): Promise<void> {
   });
 }
 
+/**
+ * Rename a Job's id. Used when the dispatcher classifies a bulk-pasted
+ * URL: the original record was created with a placeholder id like
+ * `pasted_<uuid>` because we didn't know company/role yet. Once the
+ * dispatcher picks names from the JD, we migrate the record to the
+ * derived id (`Company__Role`) so the import-preview can match it
+ * against the folder on disk and we don't end up with shadow records.
+ *
+ * Writes the new file first, deletes the old one second. If the new
+ * id already exists, this is a no-op + returns null — the caller can
+ * decide to dedupe by merging or leaving the original alone.
+ *
+ * Locks both ids during the operation to avoid races.
+ */
+export async function renameJob(oldId: string, newId: string): Promise<Job | null> {
+  if (oldId === newId) return null;
+  // Lock the old id first, then the new id, to avoid deadlock with a
+  // concurrent reverse rename (which would be a weird situation, but
+  // still).
+  return withJobLock(oldId, async () => {
+    return withJobLock(newId, async () => {
+      const current = await readJob(oldId);
+      if (!current) return null;
+      const collision = await readJob(newId);
+      if (collision) return null;
+      const renamed: Job = { ...current, id: newId, updatedAt: new Date().toISOString() };
+      await atomicWriteJSON(jobFilePath(newId), renamed);
+      // Best-effort unlink — if it fails the user just sees a shadow
+      // record, which the one-shot dedupe sweep will clean up later.
+      try {
+        await fs.unlink(jobFilePath(oldId));
+      } catch {}
+      return renamed;
+    });
+  });
+}
+
 export type CreateJobInput = Omit<
   Job,
   "updatedAt" | "statusHistory" | "discoveredAt"

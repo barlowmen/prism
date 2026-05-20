@@ -2,6 +2,7 @@
 export const JOB_STATUSES = [
   "imported",
   "discovered",
+  "queued",
   "held",
   "skipped",
   "dispatching",

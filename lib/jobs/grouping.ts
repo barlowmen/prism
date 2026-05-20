@@ -28,6 +28,7 @@ export const COLUMNS: ColumnDef[] = [
 
   // inbox
   { group: "inbox", status: "discovered", label: "Discovered" },
+  { group: "inbox", status: "queued", label: "Queued for dispatcher" },
   { group: "inbox", status: "held", label: "Held" },
   { group: "inbox", status: "recommended_skip", label: "Recommended skip" },
   { group: "inbox", status: "awaiting_input", label: "Awaiting your input" },

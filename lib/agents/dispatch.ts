@@ -140,10 +140,13 @@ export async function startDispatcher(input: DispatchInput): Promise<{
  *  - RECOMMEND-SKIP      → recommended_skip
  */
 export async function routeAfterDispatch(
-  jobId: string,
+  initialJobId: string,
   runId: string,
   folderAbsHint: string | null,
 ): Promise<JobStatus | null> {
+  // jobId can change mid-routing — see the rename block below. Use the
+  // local `jobId` variable for everything downstream.
+  let jobId = initialJobId;
   // For URL-only pastes the orchestrator didn't know the folder up front;
   // the dispatcher reports it in the result JSON.
   let folderAbs: string | null = folderAbsHint;
@@ -209,6 +212,30 @@ export async function routeAfterDispatch(
             updatedAt: new Date().toISOString(),
           });
         }
+      }
+
+      // If this Job was created from a bulk-paste (id like
+      // `pasted_<uuid>`) and the dispatcher just discovered the real
+      // company/role, migrate the record id to the derived shape.
+      // Without this, the import-preview later sees the apps/ folder
+      // and creates a SECOND Job record for the same role — leaving
+      // a shadow `pasted_*` record behind.
+      const finalCompany = companyFromResult ?? job.company;
+      const finalRole = roleFromResult ?? job.role;
+      if (
+        jobId.startsWith("pasted_") &&
+        finalCompany &&
+        finalRole
+      ) {
+        const { renameJob, deriveJobId } = await import("../jobs/store");
+        const newId = deriveJobId(finalCompany, finalRole);
+        const renamed = await renameJob(jobId, newId);
+        if (renamed) {
+          jobId = newId;
+        }
+        // If renameJob returned null because newId already exists
+        // (collision with an imported record, say), we leave the
+        // shadow alone — the dedupe sweep will catch it.
       }
     }
   }
@@ -375,7 +402,11 @@ export async function pasteJob(input: ManualPasteInput): Promise<{
       company: input.company!,
       role: input.role!,
       folderPath,
-      status: "discovered",
+      // User-pasted jobs go to `queued`, not `discovered`. Keeps them
+      // out of the Shortlist (which is for discovery-agent candidates
+      // awaiting user triage). Manual pastes are "user already
+      // approved by pasting" — they belong in the dispatcher queue.
+      status: "queued",
       source: "manual",
       sourceUrl: input.postingUrl,
     });
@@ -397,7 +428,9 @@ export async function pasteJob(input: ManualPasteInput): Promise<{
     company: "",
     role: "",
     folderPath: null,
-    status: "discovered",
+    // Same reasoning as the named-paste path: user-pasted = queued,
+    // not discovered. Bypasses Shortlist.
+    status: "queued",
     source: "manual",
     sourceUrl: input.postingUrl,
   });
