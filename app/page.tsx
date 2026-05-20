@@ -114,6 +114,17 @@ async function countImportPreview(): Promise<{
       const folderAbs = path.join(APPS_DIR, company, role);
       // Skip if any Job already owns this folder, regardless of id shape.
       if (ownedPaths.has(folderAbs)) continue;
+      // Skip very-recently-created folders. The dispatcher creates the
+      // folder mid-run and the orchestrator's routeAfterDispatch only
+      // writes folderPath onto the Job after the subprocess completes
+      // — ~5-30 seconds later. Refreshing the dashboard during that
+      // window briefly shows the folder as "unimported" even though
+      // a dispatcher run is actively producing it. 60 s of headroom
+      // covers the worst case; real legacy folders are always older.
+      try {
+        const st = await fs.stat(folderAbs);
+        if (Date.now() - st.mtimeMs < 60_000) continue;
+      } catch {}
       // Also skip if a Job with the derived id exists (covers the
       // case where the Job exists but folderPath wasn't set, e.g.
       // legacy imports).
