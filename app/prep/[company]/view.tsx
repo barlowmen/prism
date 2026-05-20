@@ -40,6 +40,11 @@ type Props = {
   hasApps: boolean;
   files: PrepFile[];
   rendered: Record<string, string>;
+  /** Server-resolved active prep-builder runId. Pre-populates the
+   *  buildRunId state so the AgentRunPane re-attaches after the user
+   *  navigates away and back, instead of looking dead while the
+   *  agent's still working. */
+  initialBuildRunId?: string | null;
 };
 
 export function PrepCompanyView({
@@ -48,6 +53,7 @@ export function PrepCompanyView({
   hasApps,
   files: initialFiles,
   rendered: initialRendered,
+  initialBuildRunId,
 }: Props) {
   const router = useRouter();
   const [files, setFiles] = useState(initialFiles);
@@ -58,8 +64,11 @@ export function PrepCompanyView({
   const [buildMsg, setBuildMsg] = useState<string | null>(null);
   /** runId of the active prep-builder agent. Mounts an AgentRunPane below
    *  the action row so the user sees the agent's tool calls + token spend
-   *  live, instead of just an "agent spawned (runId 12345abc)" toast. */
-  const [buildRunId, setBuildRunId] = useState<string | null>(null);
+   *  live, instead of just an "agent spawned (runId 12345abc)" toast.
+   *
+   *  Initial value comes from the server (initialBuildRunId) — keeps
+   *  the pane attached across navigation. */
+  const [buildRunId, setBuildRunId] = useState<string | null>(initialBuildRunId ?? null);
 
   const filesByGroup = useMemo(() => {
     const m = new Map<PrepGroup, PrepFile[]>();

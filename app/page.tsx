@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { redirect } from "next/navigation";
 import { listJobs, readJob, deriveJobId } from "@/lib/jobs/store";
+import { findActiveRuns } from "@/lib/runs/store";
 import {
   COLUMNS,
   GROUP_LABELS,
@@ -32,9 +33,10 @@ export default async function HomePage() {
     redirect("/settings/profile?first_run=1");
   }
 
-  const [jobs, importPreview] = await Promise.all([
+  const [jobs, importPreview, activeDiscovery] = await Promise.all([
     listJobs(),
     countImportPreview(),
+    findActiveRuns({ phase: "discovery" }),
   ]);
   const grouped = groupJobsByStatus(jobs);
 
@@ -46,6 +48,13 @@ export default async function HomePage() {
     {} as Record<ColumnGroup, typeof COLUMNS>,
   );
 
+  // If a discovery run was already in flight when the user navigated
+  // here (e.g. they clicked Run discovery, switched tabs, came back),
+  // hand the runId to Dashboard as an initial prop so AgentRunPane
+  // re-mounts. Without this the run kept going invisibly in the
+  // background and the user thought it had been cancelled.
+  const activeDiscoveryRunId = activeDiscovery[0]?.runId ?? null;
+
   return (
     <Dashboard
       grouped={grouped}
@@ -54,6 +63,7 @@ export default async function HomePage() {
       groupLabels={GROUP_LABELS}
       totalJobs={jobs.length}
       importPreview={importPreview}
+      activeDiscoveryRunId={activeDiscoveryRunId}
     />
   );
 }

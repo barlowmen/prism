@@ -20,10 +20,16 @@ type Props = {
   groupLabels: Record<ColumnGroup, string>;
   totalJobs: number;
   importPreview: { notImported: number; preview: Array<{ company: string; role: string }> };
+  /** Server-resolved active discovery run. Pre-populates the local
+   *  discoveryRunId state so navigating away and back doesn't lose
+   *  the AgentRunPane mount — the agent keeps working in the
+   *  background regardless of which page the user is on, but the UI
+   *  previously had no way to re-attach. */
+  activeDiscoveryRunId: string | null;
 };
 
 export function Dashboard(props: Props) {
-  const { grouped, columnsByGroup, groupOrder, groupLabels, totalJobs, importPreview } = props;
+  const { grouped, columnsByGroup, groupOrder, groupLabels, totalJobs, importPreview, activeDiscoveryRunId } = props;
   const router = useRouter();
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -33,8 +39,14 @@ export function Dashboard(props: Props) {
    * AgentRunPane mounts against it for live SSE. Cleared on completion
    * (AgentRunPane's onCompleted callback) so the pane unmounts and the
    * dashboard re-fetches jobs.
+   *
+   * Initial value comes from the server (activeDiscoveryRunId prop) —
+   * if a discovery run was already in flight when the page rendered,
+   * the AgentRunPane attaches automatically. Solves the "I navigated
+   * away and now the run looks gone but is actually still running"
+   * class of bug.
    */
-  const [discoveryRunId, setDiscoveryRunId] = useState<string | null>(null);
+  const [discoveryRunId, setDiscoveryRunId] = useState<string | null>(activeDiscoveryRunId);
 
   // Chat-context: summarize the kanban so the assistant knows what's on screen.
   const byStatus: Record<string, number> = {};

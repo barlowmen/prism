@@ -146,6 +146,27 @@ export async function upsertRunIndex(meta: RunMetadata): Promise<void> {
   await writeRunsIndex(all.slice(0, 2000));
 }
 
+/**
+ * Find runs that are still "running" by walking the persisted index.
+ * Used by server components to re-attach AgentRunPane on page render
+ * after the spawning page lost its React state (e.g. navigation +
+ * back). Optional filters narrow by phase or jobId.
+ *
+ * Returns newest-first.
+ */
+export async function findActiveRuns(filter?: {
+  phase?: string;
+  jobId?: string;
+}): Promise<RunMetadata[]> {
+  const all = await readRunsIndex();
+  return all.filter((r) => {
+    if (r.status !== "running") return false;
+    if (filter?.phase && r.phase !== filter.phase) return false;
+    if (filter?.jobId && r.jobId !== filter.jobId) return false;
+    return true;
+  });
+}
+
 export function newRunId(): string {
   return randomUUID();
 }

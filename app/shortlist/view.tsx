@@ -15,20 +15,30 @@ import { Button, CodeArea, EmptyState } from "@/components/ui";
 import { AgentRunPane } from "@/components/AgentRunPane";
 import type { Job } from "@/lib/jobs/types";
 
-export function ShortlistView({ initial }: { initial: Job[] }) {
+export function ShortlistView({
+  initial,
+  initialActiveRuns,
+}: {
+  initial: Job[];
+  /** Server-resolved dispatcher runs that were already in flight when
+   *  the page rendered. Pre-populates activeRuns so AgentRunPane
+   *  re-attaches after the user navigated away and back. */
+  initialActiveRuns?: Array<{ runId: string; company: string; role: string }>;
+}) {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [skipping, setSkipping] = useState<{ jobId: string; reason: string } | null>(null);
   /**
-   * Pending dispatcher runs spawned from Approve clicks. Each entry
-   * gets its own AgentRunPane below the list so the user can watch
-   * the dispatcher pick an archetype + classify, instead of staring
-   * at a blank shortlist wondering if the spawn worked.
+   * Pending dispatcher runs spawned from Approve clicks (or recovered
+   * from the server on render). Each entry gets its own AgentRunPane
+   * below the list so the user can watch the dispatcher pick an
+   * archetype + classify, instead of staring at a blank shortlist
+   * wondering if the spawn worked.
    */
   const [activeRuns, setActiveRuns] = useState<
     Array<{ runId: string; company: string; role: string }>
-  >([]);
+  >(initialActiveRuns ?? []);
 
   const setStatus = async (jobId: string, status: string, note: string) => {
     setBusy(jobId + ":" + status);
