@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { listJobs, readJob, deriveJobId } from "@/lib/jobs/store";
 import { ensureShadowDedupe } from "@/lib/jobs/dedupe-shadows";
 import { findActiveRuns } from "@/lib/runs/store";
+import { ensureOrphanSweep } from "@/lib/runs/orphan-sweep";
 import { groupJobsBySection } from "@/lib/jobs/attention-sections";
 import { absWorkspace, APPS_DIR, TRUTH_BASE_FILES } from "@/lib/paths";
 import { Dashboard } from "./dashboard";
@@ -28,8 +29,10 @@ export default async function HomePage() {
     redirect("/settings/profile?first_run=1");
   }
 
-  // Sweep any shadow `pasted_*` records left over from before the
-  // dispatcher-rename logic landed. Cached once per process, cheap.
+  // Reconcile any stuck Jobs whose underlying runs are dead (orphaned
+  // by restart, timed out, failed). Also sweeps shadow pasted_* records.
+  // Both are cached-once-per-process; cheap on subsequent renders.
+  await ensureOrphanSweep();
   await ensureShadowDedupe();
   const [jobs, importPreview, activeRuns] = await Promise.all([
     listJobs(),
