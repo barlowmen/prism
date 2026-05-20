@@ -1,15 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { readJob } from "@/lib/jobs/store";
+import { readJob, updateJob } from "@/lib/jobs/store";
 import { startDispatcher } from "@/lib/agents/dispatch";
+import { startDraft } from "@/lib/agents/research-draft-review";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Append the user's answer to dispatcher_question.md (or questions.md) and
- * re-spawn the dispatcher.
+ * Append the user's answer to the appropriate question file and kick
+ * the next phase. Two paths today:
+ *
+ *  - target="dispatcher" (default) → appends to dispatcher_question.md,
+ *    re-spawns the dispatcher. The dispatcher re-classifies with the
+ *    new context, which usually unblocks the GO branch.
+ *
+ *  - target="research" → appends to questions.md, kicks the draft
+ *    agent directly. The research outputs (jd_analysis.md /
+ *    company_research.md / resume_examples.md) are already on disk; the
+ *    user's answers just resolve open questions the research surfaced,
+ *    so we skip re-running research and go straight to draft. The draft
+ *    prompt reads questions.md (now with answers) for context.
  *
  * Body: { answer: string, target?: "dispatcher" | "research" }
  */
@@ -36,9 +48,8 @@ export async function POST(
     return NextResponse.json({ error: "job_not_found_or_no_folder" }, { status: 404 });
   }
   const filePath = path.join(job.folderPath, target);
-  let existing: string;
   try {
-    existing = await fs.readFile(filePath, "utf8");
+    await fs.stat(filePath);
   } catch (err: any) {
     if (err?.code === "ENOENT") {
       return NextResponse.json({ error: "question_file_missing", target }, { status: 404 });
@@ -49,8 +60,6 @@ export async function POST(
   const stamped = `\n\n## Answer (${new Date().toISOString()})\n\n${answer.trim()}\n`;
   await fs.appendFile(filePath, stamped, "utf8");
 
-  // Re-spawn dispatcher only for dispatcher questions. Research questions
-  // get re-spawned by the research agent.
   if (target === "dispatcher_question.md") {
     if (!job.sourceUrl) {
       return NextResponse.json(
@@ -72,5 +81,20 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ ok: true, target, runId: null });
+  // target = "questions.md" — kick the draft phase. The research outputs
+  // are already in folderPath/research/; the answer just resolves the
+  // open questions the research surfaced.
+  try {
+    await updateJob(id, {
+      status: "drafting",
+      statusNote: "user answered research questions — kicking draft",
+    });
+    const { runId, meta } = await startDraft({ jobId: id });
+    return NextResponse.json({ ok: true, target, runId, meta });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: true, target, runId: null, draft_error: String(err?.message ?? err) },
+      { status: 200 },
+    );
+  }
 }

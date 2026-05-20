@@ -27,6 +27,10 @@ type Props = {
   job: Job;
   /** True if dispatcher_question.md exists and lacks an "## Answer" heading. */
   hasOpenDispatcherQuestion: boolean;
+  /** True if questions.md exists and lacks an "## Answer" heading —
+   *  the research agent surfaced honesty/tailoring questions that
+   *  need the user to resolve before drafting. */
+  hasOpenResearchQuestions?: boolean;
   /** True if status=awaiting_input + provenance.md has VERIFY/unchecked items. */
   provenanceFlagged: boolean;
 };
@@ -46,7 +50,12 @@ const RECLASSIFY_OPTIONS: JobStatus[] = [
   "rejected",
 ];
 
-export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }: Props) {
+export function JobActions({
+  job,
+  hasOpenDispatcherQuestion,
+  hasOpenResearchQuestions,
+  provenanceFlagged,
+}: Props) {
   const router = useRouter();
   const [runId, setRunId] = useState<string | null>(job.latestRunId ?? null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -56,6 +65,7 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
     job.reclassifySuggestion ?? "discovered",
   );
   const [answer, setAnswer] = useState("");
+  const [researchAnswer, setResearchAnswer] = useState("");
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState("");
 
@@ -99,6 +109,33 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
         return;
       }
       setAnswer("");
+      if (data.runId) setRunId(data.runId);
+      router.refresh();
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const submitResearchAnswer = async () => {
+    setBusy("research-answer");
+    setErr(null);
+    try {
+      const r = await fetch(
+        `/api/jobs/${encodeURIComponent(job.id)}/answer-question`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answer: researchAnswer, target: "research" }),
+        },
+      );
+      const data = await r.json();
+      if (!r.ok) {
+        setErr(data.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      setResearchAnswer("");
       if (data.runId) setRunId(data.runId);
       router.refresh();
     } catch (e) {
@@ -409,33 +446,74 @@ export function JobActions({ job, hasOpenDispatcherQuestion, provenanceFlagged }
         </Callout>
       )}
 
-      {/* Dispatcher question answer textarea — accent tone (real CTA). */}
+      {/* Dispatcher question answer textarea — accent tone (real CTA).
+          id="answer-question" gives the Dashboard's "Blocked on you"
+          rows a hash anchor to deep-link to. */}
       {job.status === "awaiting_input" &&
         hasOpenDispatcherQuestion &&
         !provenanceFlagged && (
-          <Callout title="Answer the dispatcher question" tone="accent">
-            <p className="mb-2">
-              Your answer is appended to <code>dispatcher_question.md</code>{" "}
-              under a timestamped <code>## Answer</code> heading, then the
-              dispatcher re-runs with the new context.
-            </p>
-            <CodeArea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              surface="surface-2"
-              minHeight={120}
-              placeholder="Your answer…"
-            />
-            <div className="mt-2 flex justify-end gap-2">
-              <Button
-                variant="primary"
-                onClick={submitAnswer}
-                disabled={busy === "answer" || !answer.trim()}
-              >
-                {busy === "answer" ? "Submitting…" : "Submit + re-dispatch"}
-              </Button>
-            </div>
-          </Callout>
+          <div id="answer-question">
+            <Callout title="Answer the dispatcher question" tone="accent">
+              <p className="mb-2">
+                Your answer is appended to <code>dispatcher_question.md</code>{" "}
+                under a timestamped <code>## Answer</code> heading, then the
+                dispatcher re-runs with the new context.
+              </p>
+              <CodeArea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                surface="surface-2"
+                minHeight={120}
+                placeholder="Your answer…"
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <Button
+                  variant="primary"
+                  onClick={submitAnswer}
+                  disabled={busy === "answer" || !answer.trim()}
+                >
+                  {busy === "answer" ? "Submitting…" : "Submit + re-dispatch"}
+                </Button>
+              </div>
+            </Callout>
+          </div>
+        )}
+
+      {/* Research questions answer textarea — same shape, different
+          file + different next phase. The research outputs already
+          exist on disk; the answer just resolves open questions, so
+          submitting kicks the draft agent directly. */}
+      {job.status === "awaiting_input" &&
+        hasOpenResearchQuestions &&
+        !provenanceFlagged && (
+          <div id="answer-question">
+            <Callout title="Answer the research questions" tone="accent">
+              <p className="mb-2">
+                The research agent surfaced honesty/tailoring questions in{" "}
+                <code>questions.md</code> (see the Research questions tab
+                below). Your answer is appended under a timestamped{" "}
+                <code>## Answer</code> heading; the draft agent then runs
+                with the new context — research outputs are already on
+                disk so we skip re-running them.
+              </p>
+              <CodeArea
+                value={researchAnswer}
+                onChange={(e) => setResearchAnswer(e.target.value)}
+                surface="surface-2"
+                minHeight={140}
+                placeholder="Answer the numbered questions inline (e.g. '1. ~15 engagements. 2. Quarterly. 3. ...'). Free-form is fine — the draft agent reads it as context."
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <Button
+                  variant="primary"
+                  onClick={submitResearchAnswer}
+                  disabled={busy === "research-answer" || !researchAnswer.trim()}
+                >
+                  {busy === "research-answer" ? "Submitting…" : "Submit + kick draft"}
+                </Button>
+              </div>
+            </Callout>
+          </div>
         )}
 
       {/* Request-changes panel for ready_for_user_review */}

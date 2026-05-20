@@ -37,6 +37,18 @@ export default async function JobDetailPage({
     typeof dq.content === "string" &&
     !/^##\s+Answer/im.test(dq.content);
 
+  // Research questions are "open" when questions.md exists and the
+  // most recent question text appears AFTER the most recent "## Answer"
+  // heading — i.e. a research re-pass surfaced new questions since the
+  // user's last answer. For the first round the regex just checks for
+  // any Answer heading.
+  const qf = files.known.find((f) => f.key === "questions");
+  const hasOpenResearchQuestions =
+    !!qf?.exists &&
+    typeof qf.content === "string" &&
+    qf.content.trim().length > 0 &&
+    !/^##\s+Answer/im.test(qf.content);
+
   const prov = files.known.find((f) => f.key === "provenance");
   const provFlagged =
     job.status === "awaiting_input" &&
@@ -73,6 +85,7 @@ export default async function JobDetailPage({
           <JobActions
             job={job}
             hasOpenDispatcherQuestion={hasOpenDispatcherQuestion}
+            hasOpenResearchQuestions={hasOpenResearchQuestions}
             provenanceFlagged={provFlagged}
           />
         </div>
@@ -83,6 +96,7 @@ export default async function JobDetailPage({
           <JobActions
             job={job}
             hasOpenDispatcherQuestion={hasOpenDispatcherQuestion}
+            hasOpenResearchQuestions={hasOpenResearchQuestions}
             provenanceFlagged={provFlagged}
           />
         </div>

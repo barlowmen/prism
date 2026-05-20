@@ -543,10 +543,17 @@ function JobRow({
   const hostname = hostnameFromUrl(job.sourceUrl);
   const title = hasName ? job.company : hostname || "Pasted URL";
   const subtitle = hasName ? job.role : <em>Awaiting dispatcher…</em>;
+  // Deep-link directly to the answer callout when the job is blocking
+  // on the user, so they don't have to scroll past tabs hunting for
+  // where to type. The #answer-question anchor lives on JobActions.
+  const href =
+    status === "awaiting_input"
+      ? `/jobs/${encodeURIComponent(job.id)}#answer-question`
+      : `/jobs/${encodeURIComponent(job.id)}`;
   return (
     <li>
       <Link
-        href={`/jobs/${encodeURIComponent(job.id)}`}
+        href={href}
         className="block px-2 py-1.5 rounded hover:bg-[var(--color-surface-2)] transition-colors"
       >
         <div className="flex items-center justify-between gap-3">

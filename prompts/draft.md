@@ -15,8 +15,9 @@ Read the workflow file first, then in order:
 3. `{{FOLDER_REL}}/job_description.md` — the JD.
 4. `{{FOLDER_REL}}/classification.md` — the dispatcher's archetype choice + framing notes.
 5. `{{FOLDER_REL}}/research/jd_analysis.md`, `company_research.md`, `resume_examples.md`.
-6. `_meta/build_resume_template.js` — the DOCX builder template (study its structure).
-7. **The base resume DOCX for this job:** `{{BASE_RESUME_PATH}}`{{#ARCHETYPE_LABEL}} (archetype: **{{ARCHETYPE_LABEL}}**){{/ARCHETYPE_LABEL}}. Start from this file and tailor it.
+6. `{{FOLDER_REL}}/questions.md` *if it exists* — research-pass questions the user has answered. Each answer lives under a `## Answer (<timestamp>)` heading. Read these as additional context — they often resolve framing choices the resume examples flagged as needing the user's input (engagement counts, briefing frequency, exact wording for a sensitive role title, etc.). Honor the user's answers verbatim.
+7. `_meta/build_resume_template.js` — the DOCX builder template (study its structure).
+8. **The base resume DOCX for this job:** `{{BASE_RESUME_PATH}}`{{#ARCHETYPE_LABEL}} (archetype: **{{ARCHETYPE_LABEL}}**){{/ARCHETYPE_LABEL}}. Start from this file and tailor it.
 
 {{#ARCHETYPE_TAILORING_RULES}}
 ## Archetype-specific tailoring rules
