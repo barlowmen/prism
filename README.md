@@ -34,8 +34,18 @@ the engine.
 7. You **review the final DOCX** in-browser (mammoth render) and submit
    externally.
 
+The **Dashboard** organizes jobs by *who owns the next move*, not by
+pipeline phase: **Blocked on you** (agent waiting for an answer),
+**Ready when you are** (DOCX done, decision time), **Working on it**
+(system in motion, no action needed), **Parked** (held / triage / queued),
+**Done** (applied / skipped / rejected). If Blocked + Ready are empty,
+prism shows you an "all caught up" panel — that's the goal state.
+
 Throughout: a context-aware assistant (⌘J) sees what you're looking at
-and can drive the workflow, answer questions, and edit files.
+and can drive the workflow, answer questions, and edit files. An
+always-visible **active agents bar** at the top of the page surfaces
+whatever's running across all surfaces so you never lose track of a
+spawned agent after navigating away.
 
 ---
 

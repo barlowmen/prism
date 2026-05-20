@@ -191,14 +191,29 @@ dispatcher fetches the JD, picks your archetype, classifies, and either
 auto-progresses to research → draft → HM review → provenance, or asks
 you a clarifying question.
 
+Pasted jobs land at `status="queued"` on the Dashboard's **Parked**
+section briefly, then move to **Working on it** as the dispatcher
+spawns. They never appear on the Shortlist — that's strictly for
+discovery candidates awaiting your triage. (Old behavior: bulk-paste
+leaked into the Shortlist; fixed in the data-model cleanup.)
+
 Have a list of postings? Flip the modal's **Single / Bulk** toggle to
 paste many URLs at once (one per line; `#` comments and blank lines
 ignored). A concurrency dropdown caps how many dispatchers run in
 parallel — default 2, max 5. The modal returns a summary table linking
 to each new job's detail page, and the runs continue in the background.
 
-The whole chain runs on subscription quota. Token totals are visible per
-run on the **Runs** page.
+A **global spawn throttle** caps concurrent agent runs at 3 across the
+whole app so Anthropic's API load-shedder doesn't kill a batch of
+dispatchers when you approve many at once. If a run hits the rate
+limit anyway, the orchestrator auto-retries with backoff (30s, 1m, 5m,
+15m) before giving up. Any jobs that exhaust retries land in the
+**Errored** column with a one-click "Re-dispatch all" banner.
+
+The whole chain runs on subscription quota. Token totals are visible
+per run on the **Runs** page, which now polls every 5s while runs are
+active. Each row links to `/settings/runs/[id]` for a sharable live
+stream of that specific run.
 
 ---
 
@@ -207,8 +222,19 @@ run on the **Runs** page.
 **Run discovery** (top-right of dashboard) scans Greenhouse / Lever /
 Ashby boards plus HackerNews "Who is hiring" and the YC board, filters
 against your profile, and produces a shortlist of up to 25 candidates.
-This is the most experimental layer — if scoring quality is mediocre,
-you can ignore it and rely on **Paste a job**.
+While discovery runs, you'll see an inline AgentRunPane on the
+Dashboard streaming the agent's tool calls + token spend in real time.
+The pane re-attaches automatically if you navigate away and back —
+the agent keeps working invisibly in the background, but the UI now
+re-finds it on every page render.
+
+Discovery candidates land on the **Shortlist** tab where you triage
+each: **Approve** (spawns dispatcher → joins the per-job pipeline),
+**Skip** (with an optional reason — feeds future filtering), or
+**Hold** (parks for later). Each Shortlist row shows the company,
+role, a discovery fit score (0–100, color-coded), source board, and
+location — enough to triage at a glance without clicking through to
+the JD every time.
 
 ---
 
