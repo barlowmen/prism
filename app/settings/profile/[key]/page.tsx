@@ -1,3 +1,19 @@
+/**
+ * Per-section Profile Interview editor. Two-pane workspace: chat with
+ * the assistant on the left, draft markdown on the right. The user
+ * iterates with the assistant until they're happy, then clicks Commit
+ * — which replaces just this section's H2 block in
+ * `_meta/about_user.md` atomically (previous version backed up under
+ * `_meta/.prism-backups/`).
+ *
+ * Section keys are validated against the SECTIONS enum so users can't
+ * deep-link to nonsense. Page loads:
+ *   - the section's metadata (title, prompt, ordering hints)
+ *   - the user's draft (if any) from per-section state
+ *   - the existing about_user.md content (so the editor can show
+ *     the "currently committed" view alongside the draft)
+ *   - the assistant chat thread for this section (persisted)
+ */
 import { notFound } from "next/navigation";
 import { loadProfile } from "@/lib/profile/merge";
 import { readSectionState } from "@/lib/profile/store";

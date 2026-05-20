@@ -1,3 +1,13 @@
+/**
+ * Prep index — one card per company that has a `<workspace>/prep/<Co>/`
+ * directory. Each card links into the per-company prep workspace
+ * (overview + per-round prep + appendix + notes), which is where the
+ * actual interview prep editing happens.
+ *
+ * Companies show up here once the user reaches phone_screen / interview
+ * outcome on a job and the prep workspace gets bootstrapped (manually
+ * via "Bootstrap prep pack" or auto-spawned by the prep-builder agent).
+ */
 import Link from "next/link";
 import { listPrepCompanies } from "@/lib/prep/store";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/ui";

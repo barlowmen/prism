@@ -1,3 +1,13 @@
+/**
+ * Per-archetype edit page. Server-renders the existing JSON record
+ * plus a fresh stat of the base resume DOCX file on disk (so the
+ * editor knows whether to render "missing" warnings on the base
+ * resume row), then hands off to the client editor.
+ *
+ * Editor handles all the interactive flow: field edits + Save (PATCH),
+ * DOCX upload, Generate base resume (spawns the agent loop), accept
+ * anyway / restart / cancel on the base-resume state machine.
+ */
 import { notFound } from "next/navigation";
 import fs from "node:fs/promises";
 import { absInterviews } from "@/lib/paths";

@@ -1,3 +1,14 @@
+/**
+ * Truth Base page — hosts the raw markdown editor for the user-owned
+ * source-of-truth files (about_user.md + style guide). All editing
+ * UI lives in the client component TruthBaseEditor; this server file
+ * just loads each allowlisted file and passes the snapshot in.
+ *
+ * The allowlist (TRUTH_BASE_FILES in lib/paths.ts) is intentionally
+ * narrow — `workflow.md` and `build_resume_template.js` used to be
+ * here but were promoted to prism-managed system files (seeded from
+ * defaults/, not user-editable).
+ */
 import { TRUTH_BASE_FILES, type TruthBaseSlug } from "@/lib/paths";
 import { readTruthBase } from "@/lib/truth-base";
 import { PageHeader } from "@/components/ui";

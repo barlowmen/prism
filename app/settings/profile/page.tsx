@@ -1,3 +1,17 @@
+/**
+ * Profile Interview index page — the spine of first-time setup.
+ *
+ * Lists the 12 interview sections (objectives, narrative, experience,
+ * skill_depth, education, public_footprint, filters, tailoring,
+ * red_lines, lessons, open_items, quick_read), each with its current
+ * state (untouched / in_progress / committed) and a deep link into
+ * its chat-on-left / draft-on-right editor.
+ *
+ * `?first_run=1` flips the page into onboarding tone — bigger
+ * orientation callout, "Recommended order" panel — because this
+ * page is also the redirect target for new users whose
+ * `_meta/about_user.md` is missing.
+ */
 import Link from "next/link";
 import { loadProfile } from "@/lib/profile/merge";
 import { readAllSectionStates } from "@/lib/profile/store";

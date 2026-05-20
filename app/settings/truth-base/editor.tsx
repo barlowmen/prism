@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Multi-file markdown editor for the user's Truth Base — `about_user.md`
+ * and `resume_style_guide_2026.md` today. These two files are the
+ * source of truth every agent reads on cold-start, so the editor sits
+ * one click off the Settings nav.
+ *
+ * Tab-per-file with dirty-state tracking. A draft per slug lives in
+ * client state until the user clicks Save, at which point the PATCH
+ * fires against /api/truth-base/<slug>. Reload reverts the draft.
+ *
+ * The allowlist of editable slugs lives in lib/paths.ts:TRUTH_BASE_FILES.
+ * Adding a file to that map auto-surfaces it here as a new tab —
+ * everything else is keyed off TruthBaseSlug.
+ */
 import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button, CodeArea, Tab, TabStrip } from "@/components/ui";

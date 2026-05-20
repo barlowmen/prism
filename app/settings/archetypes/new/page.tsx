@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Hand-create a new archetype. Used when the user doesn't want to
+ * (or can't) scaffold from the profile's tailoring playbook — e.g.
+ * adding a one-off archetype that doesn't fit the playbook map.
+ *
+ * Form-only; minimal fields up front (label + key + description +
+ * matching hints), with the base resume DOCX upload deferred to the
+ * edit page after the record is created. Auto-derives a slug-style
+ * key from the label and lets the user edit before saving.
+ *
+ * On submit: POSTs to /api/archetypes, then router.pushes to the
+ * editor for the new key so the user can immediately upload a DOCX
+ * or refine fields.
+ */
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
