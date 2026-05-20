@@ -76,6 +76,26 @@ async function importOne(
     };
   }
 
+  // Folder-already-owned guard: even if no Job exists with the derived
+  // id, another Job (e.g. one whose dispatcher classified with a
+  // different naming convention) may already own this folder. Creating
+  // a second record here produces a duplicate that clutters the
+  // "Imported — needs reclassify" column until the user manually
+  // reclassifies it. Skip in that case.
+  const { listJobs } = await import("./store");
+  const otherOwner = (await listJobs()).find(
+    (j) => j.folderPath === folderPath && j.id !== id,
+  );
+  if (otherOwner) {
+    return {
+      id: otherOwner.id,
+      company,
+      role,
+      folderPath,
+      status: "already_exists",
+    };
+  }
+
   let sourceUrl: string | null = null;
   let discoveredAt: string | undefined;
   try {
