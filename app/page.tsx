@@ -4,13 +4,7 @@ import { redirect } from "next/navigation";
 import { listJobs, readJob, deriveJobId } from "@/lib/jobs/store";
 import { ensureShadowDedupe } from "@/lib/jobs/dedupe-shadows";
 import { findActiveRuns } from "@/lib/runs/store";
-import {
-  COLUMNS,
-  GROUP_LABELS,
-  GROUP_ORDER,
-  groupJobsByStatus,
-  type ColumnGroup,
-} from "@/lib/jobs/grouping";
+import { groupJobsBySection } from "@/lib/jobs/attention-sections";
 import { absWorkspace, APPS_DIR, TRUTH_BASE_FILES } from "@/lib/paths";
 import { Dashboard } from "./dashboard";
 
@@ -37,37 +31,32 @@ export default async function HomePage() {
   // Sweep any shadow `pasted_*` records left over from before the
   // dispatcher-rename logic landed. Cached once per process, cheap.
   await ensureShadowDedupe();
-  const [jobs, importPreview, activeDiscovery] = await Promise.all([
+  const [jobs, importPreview, activeRuns] = await Promise.all([
     listJobs(),
     countImportPreview(),
-    findActiveRuns({ phase: "discovery" }),
+    findActiveRuns(),
   ]);
-  const grouped = groupJobsByStatus(jobs);
+  const sections = groupJobsBySection(jobs);
 
-  const columnsByGroup = GROUP_ORDER.reduce(
-    (acc, g) => {
-      acc[g] = COLUMNS.filter((c) => c.group === g);
-      return acc;
-    },
-    {} as Record<ColumnGroup, typeof COLUMNS>,
-  );
-
-  // If a discovery run was already in flight when the user navigated
-  // here (e.g. they clicked Run discovery, switched tabs, came back),
-  // hand the runId to Dashboard as an initial prop so AgentRunPane
-  // re-mounts. Without this the run kept going invisibly in the
-  // background and the user thought it had been cancelled.
-  const activeDiscoveryRunId = activeDiscovery[0]?.runId ?? null;
+  // Discovery is the one phase the Dashboard's DiscoveryButton
+  // directly spawns + watches. Other phases (dispatcher, etc.) show
+  // up in the always-visible active-agents bar but don't get their
+  // own mount on this page.
+  const activeDiscoveryRunId =
+    activeRuns.find((r) => r.phase === "discovery")?.runId ?? null;
 
   return (
     <Dashboard
-      grouped={grouped}
-      columnsByGroup={columnsByGroup}
-      groupOrder={GROUP_ORDER}
-      groupLabels={GROUP_LABELS}
+      sections={sections}
       totalJobs={jobs.length}
       importPreview={importPreview}
       activeDiscoveryRunId={activeDiscoveryRunId}
+      activeRuns={activeRuns.map((r) => ({
+        runId: r.runId,
+        phase: r.phase,
+        startedAt: r.startedAt,
+        jobId: r.jobId,
+      }))}
     />
   );
 }
