@@ -65,36 +65,27 @@ export default async function HomePage() {
  * Same dry-run scan as /api/jobs/import/preview, but inlined so the
  * dashboard doesn't have to HTTP-self-fetch its own route during SSR.
  *
- * Three-stage match per folder:
- *   1. Direct id match — `Company__Role` derived from folder names.
- *   2. folderPath ownership — any Job (regardless of its id) whose
- *      folderPath points at this directory.
- *   3. Active-dispatcher suppression — when ANY dispatcher is running
- *      somewhere in the app, every folder is suppressed. Dispatchers
- *      create their folders during the run and only set the owning
- *      Job's folderPath in the post-completion handler — sometimes
- *      5-20 minutes later. During that window the folder looks like
- *      an orphan but isn't. Wait for all dispatchers to settle, then
- *      re-evaluate; truly-orphaned folders re-emerge with no false
- *      positives.
+ * Three ways a folder can be claimed (any one = skip):
+ *   1. `.prism-job-id` sidecar — the dispatcher writes this when it
+ *      creates the folder. Authoritative claim, written synchronously
+ *      mid-run. Survives orchestrator crashes.
+ *   2. folderPath match — any Job's `folderPath` field equals this
+ *      directory. Set by the orchestrator's routeAfterDispatch after
+ *      the run completes, OR by the createJob path for known names.
+ *   3. Derived-id match — a Job exists at `deriveJobId(company, role)`.
+ *      Covers legacy records whose folderPath wasn't set (e.g. older
+ *      imported entries from before this code existed).
  *
- * Stage 2 catches bulk-paste records whose id stayed `pasted_<uuid>`
- * because the dispatcher couldn't rename them. Stage 3 is the
- * belt-and-suspenders fix for the in-flight race that stage 2's
- * folderPath check can't catch (Job exists but its folderPath is null
- * until the orchestrator gets to it).
+ * Without #1 the import-preview races with in-flight dispatchers and
+ * shows their just-created folders as orphans for the 5-20 minutes
+ * between mkdir and the orchestrator writing folderPath. The sidecar
+ * fixes that for good — no mtime guards, no "suppress while running"
+ * heuristics, just an explicit on-disk ownership claim.
  */
 async function countImportPreview(): Promise<{
   notImported: number;
   preview: Array<{ company: string; role: string }>;
 }> {
-  // Stage 3 suppression — short-circuit before any disk work.
-  const { findActiveRuns } = await import("@/lib/runs/store");
-  const activeDispatchers = await findActiveRuns({ phase: "dispatch" });
-  if (activeDispatchers.length > 0) {
-    return { notImported: 0, preview: [] };
-  }
-
   let companies: string[] = [];
   try {
     companies = (await fs.readdir(APPS_DIR, { withFileTypes: true }))
@@ -126,11 +117,21 @@ async function countImportPreview(): Promise<{
     }
     for (const role of roles) {
       const folderAbs = path.join(APPS_DIR, company, role);
-      // Skip if any Job already owns this folder, regardless of id shape.
+
+      // Stage 1: sidecar claim. Authoritative — written by the
+      // dispatcher when it creates the folder.
+      try {
+        await fs.stat(path.join(folderAbs, ".prism-job-id"));
+        continue;
+      } catch {
+        // No sidecar — fall through to stages 2 & 3.
+      }
+
+      // Stage 2: folderPath ownership.
       if (ownedPaths.has(folderAbs)) continue;
-      // Also skip if a Job with the derived id exists (covers the
-      // case where the Job exists but folderPath wasn't set, e.g.
-      // legacy imports).
+
+      // Stage 3: derived-id match. Catches legacy records whose
+      // folderPath wasn't populated.
       const existing = await readJob(deriveJobId(company, role));
       if (!existing) {
         notImported++;

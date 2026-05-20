@@ -28,8 +28,11 @@ Use this folder for all your outputs. Do not pick a different name.
    - `Senior_Product_Manager_72063674`
    - If the URL contains a unique requisition ID, append it to disambiguate (e.g., `_R-276325`).
 4. Create the per-app folder at `apps/<Company>/<Role>/`. If that path already exists for a *different* posting at the same company, append a disambiguator to the role.
-5. **Write all your outputs into that folder.** From here on, treat that path as the "per-app folder" referenced below.
+5. **Claim the folder for this job.** Immediately after `mkdir`, write `apps/<Company>/<Role>/.prism-job-id` containing **exactly the job id below, nothing else** (no newline, no quotes, no whitespace). This file is how the host knows the folder belongs to this dispatcher run — without it, the dashboard's "Import folders" detector will see the folder as an orphan during the rest of your run and prompt the user to re-import it. Do this BEFORE you fetch the JD or do anything else with the folder.
+6. **Write all your outputs into that folder.** From here on, treat that path as the "per-app folder" referenced below.
 {{/COMPANY}}
+
+**Job id:** `{{JOB_ID}}` — write this into the `.prism-job-id` sidecar file as described above (URL-only path) or verify it's already there (named path: the host wrote it for you before spawn).
 
 {{#JD_TEXT}}
 The user has provided the raw JD text below (use this verbatim instead of fetching from the URL — the page may be dead or paywalled):

@@ -86,6 +86,12 @@ export async function startDispatcher(input: DispatchInput): Promise<{
     folderAbs = job.folderPath ?? path.join(APPS_DIR, company, role);
     folderRel = path.relative(INTERVIEWS_DIR, folderAbs);
     await fs.mkdir(folderAbs, { recursive: true });
+    // Write the ownership claim sidecar so the host's import-preview
+    // (countImportPreview in app/page.tsx) treats this folder as
+    // claimed for the duration of the dispatcher run. The URL-only
+    // branch handles this in the agent prompt itself — there's no
+    // folder yet when this function runs.
+    await fs.writeFile(path.join(folderAbs, ".prism-job-id"), input.jobId, "utf8");
   }
 
   const archetypes = await listArchetypes();
@@ -97,6 +103,7 @@ export async function startDispatcher(input: DispatchInput): Promise<{
     ROLE: pending ? "" : role,
     FOLDER_REL: folderRel,
     JD_TEXT: input.jdText ?? "",
+    JOB_ID: input.jobId,
     ARCHETYPES_INDEX: archetypesIndex,
   });
 

@@ -26,14 +26,17 @@ export const ATTENTION_SECTION_ORDER: AttentionSection[] = [
 
 export const SECTION_STATUSES: Record<AttentionSection, JobStatus[]> = {
   blocked: ["awaiting_input"],
-  ready: ["ready_for_user_review", "ready_to_apply", "errored"],
+  // `imported` needs user reclassification — that's user input, so it
+  // belongs in "Ready when you are" alongside other at-leisure
+  // decision states. Previous placement in Parked confused users who
+  // (rightly) expected "things needing my attention" to appear up top.
+  ready: ["ready_for_user_review", "ready_to_apply", "errored", "imported"],
   working: ["dispatching", "researching", "drafting", "hm_review", "provenance"],
   parked: [
     "discovered", // discovery candidates → triage on /shortlist
     "queued",
     "held",
     "recommended_skip",
-    "imported",
     "cancelled",
   ],
   done: ["applied", "skipped", "rejected"],
