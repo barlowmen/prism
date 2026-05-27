@@ -26,17 +26,24 @@ export const ATTENTION_SECTION_ORDER: AttentionSection[] = [
 
 export const SECTION_STATUSES: Record<AttentionSection, JobStatus[]> = {
   blocked: ["awaiting_input"],
-  // `imported` needs user reclassification — that's user input, so it
-  // belongs in "Ready when you are" alongside other at-leisure
-  // decision states. Previous placement in Parked confused users who
-  // (rightly) expected "things needing my attention" to appear up top.
-  ready: ["ready_for_user_review", "ready_to_apply", "errored", "imported"],
+  // `imported` and `recommended_skip` both need a quick user decision
+  // — reclassify the legacy folder, or accept/override the dispatcher's
+  // skip recommendation. Living in Parked made them feel deferrable
+  // when really they're decisive single-click actions, same category
+  // as ready_for_user_review and errored ("system did something, you
+  // decide"). Parked is reserved for truly no-decision-pending states.
+  ready: [
+    "ready_for_user_review",
+    "ready_to_apply",
+    "errored",
+    "recommended_skip",
+    "imported",
+  ],
   working: ["dispatching", "researching", "drafting", "hm_review", "provenance"],
   parked: [
     "discovered", // discovery candidates → triage on /shortlist
     "queued",
     "held",
-    "recommended_skip",
     "cancelled",
   ],
   done: ["applied", "skipped", "rejected"],
