@@ -268,6 +268,22 @@ export async function cancelRun(runId: string): Promise<boolean> {
 }
 
 /**
+ * IDs of runs whose Claude Code subprocess is currently live in *this*
+ * Node.js process. Distinct from the "running" set in the on-disk runs
+ * index: the index can lag (orphans from prior server processes, the
+ * upsertRunIndex race we fixed in 3e6b176). For shutdown semantics —
+ * "cancel everything that's actually running here" — this is the
+ * authoritative source.
+ */
+export function listInMemoryActiveRunIds(): string[] {
+  const out: string[] = [];
+  for (const [id, state] of runs) {
+    if (!state.completed) out.push(id);
+  }
+  return out;
+}
+
+/**
  * SSE-friendly replay: returns events from disk for a run that's no
  * longer in memory (e.g. server restart between dispatch and reconnect).
  */

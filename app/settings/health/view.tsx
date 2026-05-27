@@ -20,6 +20,8 @@ export function HealthView({ initial }: { initial: HealthReport }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<ConnectivityResult | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [shutdownError, setShutdownError] = useState<string | null>(null);
 
   const recheck = async () => {
     setBusy(true);
@@ -43,6 +45,41 @@ export function HealthView({ initial }: { initial: HealthReport }) {
     recheck();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Cancel every in-flight agent run and stop the server. The endpoint
+  // takes up to ~17s worst-case (per-run cancel/await is parallelized
+  // but bounded by a 15s wait per run, + a 1.5s exit delay). We keep
+  // the button in "Stopping…" state for the entire window; the browser
+  // loses its connection ~1.5s after the response lands, so we never
+  // need to render a "done" state.
+  const stopEverything = async () => {
+    const ok = confirm(
+      "Cancel all running agents and stop the server?\n\n" +
+        "Each agent has up to 15s to wrap up cleanly, then the server exits.\n" +
+        "You'll need to run ./server.sh start to bring it back.\n\n" +
+        "Cancelled Jobs land in 'Ready when you are' → Errored with a Re-dispatch all banner.",
+    );
+    if (!ok) return;
+    setStopping(true);
+    setShutdownError(null);
+    try {
+      const r = await fetch("/api/admin/shutdown", { method: "POST" });
+      if (!r.ok) {
+        // Server still alive (unlikely path) — surface the error and
+        // let the user try again.
+        const data = await r.json().catch(() => ({}));
+        setShutdownError(data?.error ?? `HTTP ${r.status}`);
+        setStopping(false);
+      }
+      // Success: setStopping stays true. The next.js process exits
+      // ~1.5s after the response, the fetch resolves, and the browser
+      // immediately can't reach any subsequent endpoint. The user
+      // restarts with ./server.sh start.
+    } catch {
+      // Connection drop after process.exit lands here — expected. Leave
+      // the button in "Stopping…" so the user sees the action took.
+    }
+  };
 
   const runConnectivityTest = async () => {
     setTesting(true);
@@ -272,6 +309,44 @@ export function HealthView({ initial }: { initial: HealthReport }) {
             </div>
           )}
         </Card>
+      </div>
+
+      <div className="mt-8">
+        <Callout
+          tone="err"
+          title="Stop all agents and shut down server"
+          action={
+            <Button
+              variant="danger"
+              onClick={stopEverything}
+              disabled={stopping}
+            >
+              {stopping ? "Stopping agents…" : "Stop everything"}
+            </Button>
+          }
+        >
+          Cancels every in-flight agent run, then exits the Next.js process.
+          Each agent gets up to <strong>15 seconds</strong> to terminate
+          cleanly, so the response can take up to ~17s in the worst case.
+          Restart with <code>./server.sh start</code>. Cancelled Jobs land in{" "}
+          <strong>Ready when you are → Errored</strong> with a{" "}
+          <em>Re-dispatch all</em> banner waiting on the Dashboard.
+        </Callout>
+        {stopping && (
+          <div
+            className="mt-2 text-xs"
+            style={{ color: "var(--color-fg-muted)" }}
+          >
+            Stopping agents… (this can take up to a minute). The browser
+            will lose its connection to the server shortly after each agent
+            confirms termination.
+          </div>
+        )}
+        {shutdownError && (
+          <div className="mt-2 text-xs" style={{ color: "var(--color-err)" }}>
+            Shutdown failed: {shutdownError}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 text-[11px] font-mono" style={{ color: "var(--color-fg-muted)" }}>

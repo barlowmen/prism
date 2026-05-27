@@ -286,13 +286,57 @@ function describeReason(run: RunMetadata): string {
 }
 
 async function sweepRuns(): Promise<Set<string>> {
-  const orphaned = new Set<string>();
+  const { reconciled, orphanedIds } = await reconcileStaleRunningEntries();
+  if (orphanedIds.length > 0) {
+    console.warn(
+      `[orphan-sweep] cleaned ${orphanedIds.length} orphaned run${orphanedIds.length === 1 ? "" : "s"}`,
+    );
+  }
+  if (reconciled > 0) {
+    console.warn(
+      `[orphan-sweep] reconciled ${reconciled} stale "running" entr${reconciled === 1 ? "y" : "ies"} from per-run log meta_end`,
+    );
+  }
+  return new Set(orphanedIds);
+}
+
+/**
+ * Walk the runs index and fix every entry marked "running" that isn't
+ * actually running anymore.
+ *
+ * Two terminal states are possible for a stale "running" entry:
+ *   - **reconciled**: the per-run log already contains a meta_end with a
+ *     real terminal status (completed / failed / cancelled / timed_out).
+ *     The log is authoritative — we just promote that meta back into
+ *     the index. This catches the upsertRunIndex race we hit when two
+ *     concurrent updates clobbered each other and a finished run got
+ *     stuck at "running" in the index even though its log was clean.
+ *   - **orphaned**: no meta_end in the log either. The subprocess died
+ *     with the server. Synthesize a meta_end + completion event in the
+ *     log and mark the index entry failed (exitCode -1).
+ *
+ * Public + non-cached so callers other than the once-per-process
+ * `ensureOrphanSweep` (e.g. the graceful-shutdown route) can run this
+ * directly. Pass `skipRunIds` for runs that are still genuinely active
+ * in the broker's in-memory map — those will be cancelled separately
+ * and should not be touched here.
+ *
+ * Returns counts so the caller can show "reconciled N + cancelled M"
+ * to the user.
+ */
+export async function reconcileStaleRunningEntries(
+  opts: { skipRunIds?: Set<string>; orphanNote?: string } = {},
+): Promise<{ reconciled: number; orphanedIds: string[] }> {
+  const skip = opts.skipRunIds ?? new Set<string>();
+  const note =
+    opts.orphanNote ?? "orphaned by server restart — process died before run completed";
   const all = await readRunsIndex();
-  const orphanNote = "orphaned by server restart — process died before run completed";
   const now = new Date().toISOString();
-  let staleReconciled = 0;
+  const orphanedIds: string[] = [];
+  let reconciled = 0;
   for (const meta of all) {
     if (meta.status !== "running") continue;
+    if (skip.has(meta.runId)) continue;
 
     // Before declaring orphan, check the per-run log. The index can lag
     // behind the log when upsertRunIndex races with another write
@@ -306,34 +350,22 @@ async function sweepRuns(): Promise<Set<string>> {
       logged.meta.completedAt
     ) {
       await upsertRunIndex(logged.meta).catch(() => {});
-      staleReconciled++;
-      // Don't add to `orphaned` — the run truly completed; downstream
-      // sweepJobs / sweepArchetypes shouldn't treat it as an orphan.
+      reconciled++;
       continue;
     }
 
-    orphaned.add(meta.runId);
+    orphanedIds.push(meta.runId);
     const fixed: RunMetadata = {
       ...meta,
       status: "failed",
       exitCode: -1,
       completedAt: now,
-      finalText: meta.finalText ?? orphanNote,
+      finalText: meta.finalText ?? note,
     };
-    await appendSyntheticTerminator(meta.runId, fixed, orphanNote).catch(() => {});
+    await appendSyntheticTerminator(meta.runId, fixed, note).catch(() => {});
     await upsertRunIndex(fixed).catch(() => {});
   }
-  if (orphaned.size > 0) {
-    console.warn(
-      `[orphan-sweep] cleaned ${orphaned.size} orphaned run${orphaned.size === 1 ? "" : "s"}`,
-    );
-  }
-  if (staleReconciled > 0) {
-    console.warn(
-      `[orphan-sweep] reconciled ${staleReconciled} stale "running" entr${staleReconciled === 1 ? "y" : "ies"} from per-run log meta_end`,
-    );
-  }
-  return orphaned;
+  return { reconciled, orphanedIds };
 }
 
 async function appendSyntheticTerminator(
