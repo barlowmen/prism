@@ -10,7 +10,13 @@ Read, in order:
 1. `{{FOLDER_REL}}/job_description.md` — what you posted.
 2. `{{FOLDER_REL}}/research/company_research.md` — context on what your company cares about right now.
 3. `{{FOLDER_REL}}/research/jd_analysis.md` — what you'd look for in a screen.
-4. The latest tailored resume DOCX at `{{FOLDER_REL}}/{{DOCX_NAME}}` (read the bytes via the docx tool; do not skim from filename alone).
+4. The latest tailored resume DOCX at `{{FOLDER_REL}}/{{DOCX_NAME}}`. Read its **actual text** by running this Bash command (pre-approved — `.docx` is a zip, so you can't read it with the file Read tool):
+
+   ```
+   node _meta/read_docx.js {{FOLDER_REL}}/{{DOCX_NAME}}
+   ```
+
+   It prints the resume's plain text to stdout. Do not skim from the filename alone, and do not try `unzip`/`python`/other tools — only `node` is pre-approved here.
 5. `{{FOLDER_REL}}/feedback_history.md` if it exists — prior passes (don't repeat the same notes).
 
 Web searches are allowed if you want to sanity-check claims or industry framing.

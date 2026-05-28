@@ -8,6 +8,8 @@ import "server-only";
  *     - workflow.md                  — pipeline spec (NOT user-editable)
  *     - resume_style_guide_2026.md   — style/ATS/voice rules (user-editable)
  *     - build_resume_template.js     — DOCX builder template (NOT user-editable)
+ *     - read_docx.js                 — zero-dep DOCX→text reader the review
+ *                                       agents run via `node` (pre-approved)
  *
  *   Under <workspace>/.claude/ — Claude Code project settings:
  *     - settings.json                — pre-approves `node` so the first
@@ -55,6 +57,15 @@ const SYSTEM_FILES: SystemFile[] = [
     targetAbsPath: path.join(META_DIR, "build_resume_template.js"),
     defaultName: "build_resume_template.js",
     label: "_meta/build_resume_template.js",
+  },
+  {
+    // Zero-dep DOCX→text reader the review agents shell out to via
+    // `node _meta/read_docx.js <docx>`. Pre-approved by Bash(node:*),
+    // so it sidesteps the headless permission gate that was denying the
+    // agents' unzip/python attempts and stalling jobs in hm_review.
+    targetAbsPath: path.join(META_DIR, "read_docx.js"),
+    defaultName: "read_docx.js",
+    label: "_meta/read_docx.js",
   },
   {
     targetAbsPath: path.join(WORKSPACE_DIR, ".claude", "settings.json"),

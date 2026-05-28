@@ -207,6 +207,14 @@ export async function updateJob(id: string, patch: JobUpdate): Promise<Job> {
       ];
     }
 
+    // Persist the note on the job itself whenever one is supplied — even
+    // for same-status updates. statusHistory only records notes on a
+    // status *change*, so an HM-review pass that re-affirms `hm_review`
+    // with a "needs revision" note used to drop it on the floor and the
+    // user never saw the feedback signal. This keeps the latest note
+    // visible on the job detail page regardless of transition.
+    if (patch.statusNote !== undefined) next.statusNote = patch.statusNote;
+
     if (patch.notes !== undefined) next.notes = patch.notes;
     if (patch.sourceUrl !== undefined) next.sourceUrl = patch.sourceUrl;
     if (patch.outcome !== undefined) {

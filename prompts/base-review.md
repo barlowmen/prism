@@ -12,7 +12,13 @@ Take on that role. You are screening this candidate's resume *cold*. Would you a
 
 Read, in order:
 
-1. The generated base resume at **`{{DOCX_REL_PATH}}`** — read the bytes via the docx tool. Do not infer content from the filename.
+1. The generated base resume at **`{{DOCX_REL_PATH}}`**. Read its **actual text** by running this Bash command (pre-approved — `.docx` is a zip, so you can't read it with the file Read tool):
+
+   ```
+   node _meta/read_docx.js {{DOCX_REL_PATH}}
+   ```
+
+   It prints the resume's plain text to stdout. Do not infer content from the filename, and do not try `unzip`/`python`/other tools — only `node` is pre-approved here.
 2. `_meta/about_user.md` — what the candidate has actually done. Use this to check **every** concrete claim in the resume.
 3. `_meta/resume_style_guide_2026.md` — format + voice rules.
 4. The archetype's playbook subsection from `_meta/about_user.md` "Tailoring playbook by archetype":

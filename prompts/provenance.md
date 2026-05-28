@@ -11,7 +11,13 @@ Read, in order:
 2. `{{FOLDER_REL}}/job_description.md` — the JD.
 3. `{{FOLDER_REL}}/research/jd_analysis.md` and `company_research.md` for context on framing decisions.
 4. `{{FOLDER_REL}}/build_resume.js` — the script that generated the DOCX. Use this as the structured source of every bullet rather than re-parsing the DOCX.
-5. `{{FOLDER_REL}}/{{DOCX_NAME}}` — the actual DOCX bytes.
+5. The rendered DOCX text, to confirm the build script matches what shipped. Read it by running this Bash command (pre-approved — `.docx` is a zip, so the file Read tool can't open it):
+
+   ```
+   node _meta/read_docx.js {{FOLDER_REL}}/{{DOCX_NAME}}
+   ```
+
+   Prints the resume's plain text to stdout. Don't try `unzip`/`python`/other tools — only `node` is pre-approved here.
 
 ## What to produce
 

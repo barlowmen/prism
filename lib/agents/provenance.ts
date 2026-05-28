@@ -19,6 +19,7 @@ import { readJob, updateJob } from "../jobs/store";
 import type { JobStatus } from "../jobs/types";
 import { loadPrompt } from "../prompt-template";
 import { startRun } from "../runs/broker";
+import { deniedToolNames, failureNote } from "../runs/denials";
 import type { RunMetadata } from "../runs/types";
 import { readPerAppFiles } from "../jobs/per-app-files";
 
@@ -114,9 +115,10 @@ async function routeAfterProvenance(jobId: string, runId: string): Promise<JobSt
   }
 
   if (!verdict) {
+    const denied = await deniedToolNames(runId);
     await updateJob(jobId, {
       status: "errored",
-      statusNote: "provenance completed without parseable verdict",
+      statusNote: failureNote("provenance completed without parseable verdict", denied),
     });
     return "errored";
   }

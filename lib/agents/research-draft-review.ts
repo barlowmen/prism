@@ -30,6 +30,7 @@ import { readJob, updateJob } from "../jobs/store";
 import type { Job, JobStatus } from "../jobs/types";
 import { loadPrompt } from "../prompt-template";
 import { startRun } from "../runs/broker";
+import { deniedToolNames, failureNote } from "../runs/denials";
 import type { RunMetadata } from "../runs/types";
 import { readPerAppFiles } from "../jobs/per-app-files";
 
@@ -110,7 +111,7 @@ export async function startResearch(input: StartResearchInput): Promise<{
 
   done
     .then(async () => {
-      await routeAfterResearch(input.jobId);
+      await routeAfterResearch(input.jobId, runId);
     })
     .catch(async (err) => {
       await updateJob(input.jobId, {
@@ -122,11 +123,35 @@ export async function startResearch(input: StartResearchInput): Promise<{
   return { runId, meta };
 }
 
-async function routeAfterResearch(jobId: string): Promise<JobStatus> {
+async function routeAfterResearch(jobId: string, runId: string): Promise<JobStatus> {
   const job = await readJob(jobId);
   if (!job?.folderPath) {
     throw new Error("job_disappeared");
   }
+
+  // If the research run was denied tools AND produced no research files,
+  // it couldn't do its job — error with the specific cause instead of
+  // auto-kicking a draft off thin/empty research.
+  const denied = await deniedToolNames(runId);
+  if (denied.length > 0) {
+    const researchDir = path.join(job.folderPath, "research");
+    let researchFiles: string[] = [];
+    try {
+      researchFiles = (await fs.readdir(researchDir)).filter((f) =>
+        f.toLowerCase().endsWith(".md"),
+      );
+    } catch {
+      // no research dir at all
+    }
+    if (researchFiles.length === 0) {
+      await updateJob(jobId, {
+        status: "errored",
+        statusNote: failureNote("research produced no output", denied),
+      });
+      return "errored";
+    }
+  }
+
   const questionsPath = path.join(job.folderPath, "questions.md");
   if (await fileExists(questionsPath)) {
     const txt = (await safeRead(questionsPath)) ?? "";
@@ -208,7 +233,7 @@ export async function startDraft(input: StartDraftInput): Promise<{
 
   done
     .then(async () => {
-      await routeAfterDraft(input.jobId);
+      await routeAfterDraft(input.jobId, runId);
     })
     .catch(async (err) => {
       await updateJob(input.jobId, {
@@ -220,15 +245,16 @@ export async function startDraft(input: StartDraftInput): Promise<{
   return { runId, meta };
 }
 
-async function routeAfterDraft(jobId: string): Promise<JobStatus> {
+async function routeAfterDraft(jobId: string, runId: string): Promise<JobStatus> {
   const job = await readJob(jobId);
   if (!job?.folderPath) throw new Error("job_disappeared");
 
   const files = await readPerAppFiles(job.folderPath);
   if (files.finalDocx.length === 0) {
+    const denied = await deniedToolNames(runId);
     await updateJob(jobId, {
       status: "errored",
-      statusNote: "draft completed but no DOCX was produced",
+      statusNote: failureNote("draft completed but no DOCX was produced", denied),
     });
     return "errored";
   }
@@ -310,19 +336,29 @@ async function routeAfterHmReview(jobId: string, runId: string): Promise<JobStat
     }
   } catch {}
 
-  // Fallback: scan feedback.md for the verdict line.
+  // Fallback: scan feedback.md for the verdict line. Strip markdown
+  // emphasis (*, _) first so `**Verdict:** needs revision` matches — the
+  // naive \s* between ":" and the value used to miss the bold form,
+  // marking jobs errored even when the verdict was clear (same fix as
+  // the base-resume reviewer).
   if (!verdict) {
     const fb = await safeRead(path.join(job.folderPath, "feedback.md"));
     if (fb) {
-      if (/verdict\s*:\s*ready to submit/i.test(fb)) verdict = "ready_to_submit";
-      else if (/verdict\s*:\s*needs revision/i.test(fb)) verdict = "needs_revision";
+      const cleaned = fb.replace(/[*_]+/g, "");
+      if (/verdict\s*:\s*ready to submit/i.test(cleaned)) verdict = "ready_to_submit";
+      else if (/verdict\s*:\s*needs revision/i.test(cleaned)) verdict = "needs_revision";
     }
   }
 
   if (!verdict) {
+    // No parseable verdict. The most common cause is the review agent
+    // being denied a tool it needed (e.g. Bash to read the DOCX) — name
+    // it specifically so the user can pre-approve it, and so the job
+    // errors now rather than sitting until the next orphan-sweep.
+    const denied = await deniedToolNames(runId);
     await updateJob(jobId, {
       status: "errored",
-      statusNote: "HM review completed without a parseable verdict",
+      statusNote: failureNote("HM review completed without a parseable verdict", denied),
     });
     return "errored";
   }

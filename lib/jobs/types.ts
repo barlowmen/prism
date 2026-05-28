@@ -59,6 +59,13 @@ export type Job = {
   /** ISO. Updated on every status transition. */
   updatedAt: string;
   statusHistory: StatusHistoryEntry[];
+  /** The most recent note about the current status. Recorded on every
+   *  updateJob that passes a statusNote — including same-status updates
+   *  (e.g. an HM-review pass that re-affirms `hm_review` with a "needs
+   *  revision" note). statusHistory only captures notes on status
+   *  *changes*, so without this field a same-status note was silently
+   *  dropped and the user never saw the agent's feedback signal. */
+  statusNote?: string;
   /** Set when an imported job hasn't been reclassified yet. */
   reclassifySuggestion?: JobStatus | null;
   notes?: string;

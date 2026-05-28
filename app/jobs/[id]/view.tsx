@@ -208,6 +208,14 @@ function Header({ job, files }: { job: Job; files: PerAppFiles }) {
             </span>
           )}
         </div>
+        {job.statusNote && (
+          <div
+            className="mt-1.5 text-xs"
+            style={{ color: "var(--color-fg-muted)" }}
+          >
+            {job.statusNote}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -498,6 +506,7 @@ function MetaPane({ job, files }: { job: Job; files: PerAppFiles }) {
       <Section title="State">
         <Row label="id" value={job.id} mono />
         <Row label="status" value={job.status} mono />
+        {job.statusNote && <Row label="latest note" value={job.statusNote} />}
         <Row label="source" value={job.source} mono />
         {job.reclassifySuggestion && (
           <Row label="reclassify suggestion" value={job.reclassifySuggestion} mono />
