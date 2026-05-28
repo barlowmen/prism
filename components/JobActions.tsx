@@ -21,7 +21,18 @@ import { useRouter } from "next/navigation";
 import { MoreHorizontal, NotebookText } from "lucide-react";
 import { Button, Callout, CodeArea } from "./ui";
 import { AgentRunPane } from "./AgentRunPane";
-import { type Job, type JobStatus } from "@/lib/jobs/types";
+import { JOB_STATUSES, type Job, type JobStatus } from "@/lib/jobs/types";
+
+/** Statuses that imply a live agent is doing work. Surfaced separately
+ *  in the manual-override picker because setting one of them is just a
+ *  relabel — it does NOT spawn the corresponding agent. */
+const AGENT_PHASE_STATUSES = new Set<JobStatus>([
+  "dispatching",
+  "researching",
+  "drafting",
+  "hm_review",
+  "provenance",
+]);
 
 type Props = {
   job: Job;
@@ -68,6 +79,7 @@ export function JobActions({
   const [researchAnswer, setResearchAnswer] = useState("");
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState("");
+  const [manualStatus, setManualStatus] = useState<JobStatus>(job.status);
 
   const dispatch = async () => {
     setBusy("dispatch");
@@ -629,6 +641,62 @@ export function JobActions({
           )}
         </div>
       )}
+
+      {/* Manual status override — always-available escape hatch. The
+          per-status action buttons above cover the happy path; this is
+          for when the user changes their mind (e.g. ready_to_apply →
+          skipped) or needs to unstick a job whose orchestrator handoff
+          was lost. Quiet <details> so it doesn't compete with the real
+          CTAs. */}
+      <details className="rounded-md border" style={{ borderColor: "var(--color-border)" }}>
+        <summary
+          className="list-none cursor-pointer select-none px-3 py-2 text-xs flex items-center gap-1.5"
+          style={{ color: "var(--color-fg-muted)" }}
+        >
+          <MoreHorizontal className="w-3 h-3" />
+          Change status manually
+        </summary>
+        <div className="px-3 pb-3 pt-1">
+          <p className="text-[11px] mb-2.5" style={{ color: "var(--color-fg-muted)" }}>
+            Override the pipeline state directly. Picking an agent phase
+            (dispatching / researching / drafting / hm&nbsp;review / provenance)
+            only relabels the job — it does <strong>not</strong> spawn that
+            agent. Use the action buttons above to actually run a phase.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={manualStatus}
+              onChange={(e) => setManualStatus(e.target.value as JobStatus)}
+              className="px-2 py-1.5 rounded-md border text-sm"
+              style={{
+                background: "var(--color-surface-2)",
+                borderColor: "var(--color-border)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {JOB_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                  {s === job.status ? "  (current)" : ""}
+                  {AGENT_PHASE_STATUSES.has(s) ? "  — agent phase" : ""}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="danger"
+              onClick={() => setStatus(manualStatus, "status set manually by user")}
+              disabled={busy === `status:${manualStatus}` || manualStatus === job.status}
+              title={
+                manualStatus === job.status
+                  ? "Pick a different status"
+                  : `Set status to ${manualStatus}`
+              }
+            >
+              {busy === `status:${manualStatus}` ? "Setting…" : "Set status"}
+            </Button>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
