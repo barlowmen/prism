@@ -17,7 +17,11 @@ Read the workflow file first, then in order:
 5. `{{FOLDER_REL}}/research/jd_analysis.md`, `company_research.md`, `resume_examples.md`.
 6. `{{FOLDER_REL}}/questions.md` *if it exists* — research-pass questions the user has answered. Each answer lives under a `## Answer (<timestamp>)` heading. Read these as additional context — they often resolve framing choices the resume examples flagged as needing the user's input (engagement counts, briefing frequency, exact wording for a sensitive role title, etc.). Honor the user's answers verbatim.
 7. `_meta/build_resume_template.js` — the DOCX builder template (study its structure).
-8. **The base resume DOCX for this job:** `{{BASE_RESUME_PATH}}`{{#ARCHETYPE_LABEL}} (archetype: **{{ARCHETYPE_LABEL}}**){{/ARCHETYPE_LABEL}}. Start from this file and tailor it.
+8. **The base resume DOCX for this job:** `{{BASE_RESUME_PATH}}`{{#ARCHETYPE_LABEL}} (archetype: **{{ARCHETYPE_LABEL}}**){{/ARCHETYPE_LABEL}}. Start from this file and tailor it. Read its **actual text** by running this Bash command (pre-approved — `.docx` is a zip, so the file Read tool can't open it; don't try `unzip`/`python`/other tools):
+
+   ```
+   node _meta/read_docx.js {{BASE_RESUME_PATH}}
+   ```
 
 {{#ARCHETYPE_TAILORING_RULES}}
 ## Archetype-specific tailoring rules
