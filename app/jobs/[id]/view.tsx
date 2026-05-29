@@ -105,6 +105,21 @@ export function JobDetailView({ job, files, renderedMarkdown }: Props) {
   const [group, setGroup] = useState<GroupId>(initialGroup);
   const [subTab, setSubTab] = useState<string>(initialSubTab);
 
+  // Deep-link support: a `#notes` (or `#audit`, `#resume`, …) hash on the
+  // URL opens that tab group on load. The Applications page's "Feedback"
+  // link uses `#notes` to land straight on the interview-feedback editor
+  // instead of the default resume tab.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return;
+    const match = visible.find((v) => v.id === hash);
+    if (match) {
+      setGroup(match.id);
+      setSubTab(match.keys[0]);
+    }
+  }, [visible]);
+
   const onGroup = (g: GroupId) => {
     setGroup(g);
     const v = visible.find((x) => x.id === g);
